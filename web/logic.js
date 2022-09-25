@@ -89,8 +89,9 @@ class Brick extends SquareAABBCollidable {
 }
 ;
 function calc_x_vel_paddle() {
-    return Math.max(getWidth(), getHeight()) / (isTouchSupported() ? 3 : 4);
+    return Math.max(getWidth(), getHeight()) / (isTouchSupported() ? 1 : 2);
 }
+const keyboardHandler = new KeyboardHandler();
 class Game extends SquareAABBCollidable {
     constructor(touchListener, x, y, width, height) {
         super(x, y, width, height);
@@ -104,11 +105,12 @@ class Game extends SquareAABBCollidable {
         this.init(width, height);
         touchListener.registerCallBack("touchmove", () => true, (event) => {
             this.last_dx = event.deltaX;
-            this.paddle_vel_x = ((event.touchPos[0] - this.paddle.mid_x()) > 0 ? 1 : -1) * calc_x_vel_paddle();
+            this.paddle_target_x = event.touchPos[0];
+            this.paddle_vel_x = ((event.touchPos[0] - this.paddle.mid_x()) > 0 ? 1 : -1) * calc_x_vel_paddle() * 2;
         });
         touchListener.registerCallBack("touchstart", () => true, (event) => {
             this.balls.forEach(ball => ball.release());
-            this.paddle_vel_x = ((event.touchPos[0] - this.paddle.mid_x()) > 0 ? 1 : -1) * calc_x_vel_paddle();
+            this.paddle_vel_x = ((event.touchPos[0] - this.paddle.mid_x()) > 0 ? 1 : -1) * calc_x_vel_paddle() * 2;
         });
         touchListener.registerCallBack("touchend", () => true, (event) => {
             this.paddle_vel_x = 0;
@@ -181,6 +183,8 @@ class Game extends SquareAABBCollidable {
                         b.direction[0] = Math.cos(angle) * mag * -1;
                         b.direction[1] = Math.sin(angle) * mag * -1;
                         b.y = brick.y - b.height;
+                        if (b.direction[1] > -80)
+                            b.direction[1] = -80;
                     }
                 }
                 else {
@@ -229,7 +233,9 @@ class Game extends SquareAABBCollidable {
             this.add_ball();
             //this.init(this.height, this.width);
         }
-        this.paddle.x += this.paddle_vel_x * delta_time / 1000;
+        if (Math.abs(this.paddle_target_x - this.paddle.mid_x()) > this.paddle.width / 10 ||
+            (keyboardHandler.keysHeld["ArrowLeft"] || keyboardHandler.keysHeld["ArrowRight"]))
+            this.paddle.x += this.paddle_vel_x * delta_time / 1000;
         if (this.paddle.x > this.width) {
             this.paddle.x = -this.paddle.width;
         }
@@ -242,7 +248,6 @@ class Game extends SquareAABBCollidable {
 async function main() {
     const canvas = document.getElementById("screen");
     const touchListener = new SingleTouchListener(canvas, false, true, false);
-    const keyboardHandler = new KeyboardHandler();
     canvas.onmousemove = (event) => {
     };
     canvas.addEventListener("wheel", (e) => {
@@ -275,7 +280,6 @@ async function main() {
         }
     });
     keyboardHandler.registerCallBack("keyup", () => true, (event) => {
-        game.paddle_vel_x = 0;
         switch (event.code) {
             case ("ArrowLeft"):
                 if (game.paddle_vel_x < 0)
@@ -300,7 +304,6 @@ async function main() {
             canvas.width = game.width;
             canvas.height = game.height - (isTouchSupported() ? 125 : 25);
             game.resize(canvas.width, canvas.height);
-            //console.log(game.width, game.height);
         }
         dt = Date.now() - start;
         start = Date.now();
