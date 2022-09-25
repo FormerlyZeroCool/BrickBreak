@@ -129,6 +129,7 @@ class Game extends SquareAABBCollidable {
         });
         touchListener.registerCallBack("touchstart", () => true, (event:TouchMoveEvent) => {
             this.balls.forEach(ball => ball.release());
+            this.paddle.x = event.touchPos[0] - this.paddle.width / 2;
         });
     }
     add_ball():void
