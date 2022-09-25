@@ -6,8 +6,13 @@ class Ball extends SquareAABBCollidable {
     constructor(x, y, radius) {
         super(x - radius, y - radius, radius * 2, radius * 2);
         this.radius = radius;
-        this.direction = [-400, 400];
+        this.direction = [0, 0];
         this.attack_power = 1;
+    }
+    release() {
+        if (this.direction[0] === 0) {
+            this.direction = [(random() - 0.5) * 400, random() * -400];
+        }
     }
     mid_x() {
         return this.x + this.width / 2;
@@ -41,7 +46,7 @@ class Ball extends SquareAABBCollidable {
                 this.direction[0] *= -1;
             return true;
         }
-        if (this.y + this.height >= y + height) {
+        else if (this.y + this.height >= y + height) {
             if (this.direction[1] > 0)
                 this.direction[1] *= -1;
             return true;
@@ -55,6 +60,8 @@ class Ball extends SquareAABBCollidable {
     }
     hit(brick) {
         brick.take_damage(this.attack_power);
+        this.direction[0] *= 1.01;
+        this.direction[1] *= 1.01;
     }
 }
 ;
@@ -103,7 +110,7 @@ class Game extends SquareAABBCollidable {
         const brick_width = Math.floor(width / bricks_across);
         const brick_height = Math.floor(height * 0.05);
         for (let i = 0; i < this.bricks.length; i++) {
-            const brick = this.bricks[i++];
+            const brick = this.bricks[i];
             const px = brick.x / this.width;
             const py = brick.y / this.height;
             brick.x = px * width;
@@ -149,7 +156,7 @@ class Game extends SquareAABBCollidable {
                         if (b.direction[0] < 0)
                             b.direction[0] *= -1;
                     }
-                    if (ball.mid_y() + b.radius - brick.y < 10) {
+                    else if (ball.mid_y() + b.radius - brick.y < 10) {
                         if (b.direction[1] > 0)
                             b.direction[1] *= -1;
                     }
