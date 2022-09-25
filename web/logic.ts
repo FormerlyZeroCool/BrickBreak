@@ -18,6 +18,7 @@ class Ball extends SquareAABBCollidable implements Circle {
     {
         if(this.direction[0] === 0)
         {
+            srand(Math.random());
             this.direction = [(random() - 0.5) * 400, random() * -400];
         }
     }
@@ -112,8 +113,9 @@ class Game extends SquareAABBCollidable {
         super(x, y, width, height);
         this.bricks = [];
         this.paddle_vel_x = 0;
-        this.balls = [new Ball(width * 0.9, height * 0.9, width * 0.02)];
         this.paddle = new Brick(width / 2 - width * 0.05, height * 0.95, width * 0.1, height * 0.05);
+        this.balls = [];
+        this.balls.push(new Ball(this.paddle.mid_x(), this.paddle.y - height * 0.05, height * 0.025));
         this.bricks.push(this.paddle);
         this.init(width, height);
     }
@@ -124,7 +126,7 @@ class Game extends SquareAABBCollidable {
         const brick_height = height * 0.05;
         for(let y = 0; y < 5*brick_height; y += brick_height)
         {
-            for(let x = 0; x < 20 * brick_width; x += brick_width)
+            for(let x = 0; x < 19 * brick_width; x += brick_width)
             {
                 this.bricks.push(new Brick(x, y, brick_width, brick_height));
             }
@@ -146,6 +148,15 @@ class Game extends SquareAABBCollidable {
             brick.height = brick_height;
         }
         this.paddle.width *= 3;
+        this.balls.forEach(ball => {
+            const px = ball.x / this.width;
+            const py = ball.y / this.height;
+            ball.x = px * width;
+            ball.y = py * height;
+            ball.radius = height * 0.025;
+            ball.width = ball.radius * 2;
+            ball.height = ball.radius * 2;
+        });
         this.width = width;
         this.height = height;
     }
@@ -164,6 +175,10 @@ class Game extends SquareAABBCollidable {
         this.paddle.draw(canvas, ctx);
     }
     update_state(delta_time: number): void {
+        if(this.bricks.length === 1)
+        {
+            this.init(this.width, this.height);
+        }
         this.collision_map = new SpatialHashMap2D(this.balls, this.bricks, this.width, this.height, 20, 20);
         this.collision_map.handle_by_cell((a:SquareAABBCollidable, b:SquareAABBCollidable) => {}, 
         (ball:SquareAABBCollidable, brick:SquareAABBCollidable) => {
@@ -254,7 +269,6 @@ async function main()
         switch(event.code)
                 {
                     case("Space"):
-                        game.balls.push(new Ball(game.paddle.mid_x(), game.paddle.y - 20, 10))
                         game.balls.forEach(ball => ball.release());
                     break;
                    
