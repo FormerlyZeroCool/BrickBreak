@@ -88,6 +88,9 @@ class Brick extends SquareAABBCollidable {
     }
 }
 ;
+function calc_x_vel_paddle() {
+    return Math.max(getWidth(), getHeight()) / (isTouchSupported() ? 3 : 4);
+}
 class Game extends SquareAABBCollidable {
     constructor(touchListener, x, y, width, height) {
         super(x, y, width, height);
@@ -101,11 +104,14 @@ class Game extends SquareAABBCollidable {
         this.init(width, height);
         touchListener.registerCallBack("touchmove", () => true, (event) => {
             this.last_dx = event.deltaX;
-            this.paddle.x = event.touchPos[0] - this.paddle.width / 2;
+            this.paddle_vel_x = ((event.touchPos[0] - this.paddle.mid_x()) > 0 ? 1 : -1) * calc_x_vel_paddle();
         });
         touchListener.registerCallBack("touchstart", () => true, (event) => {
             this.balls.forEach(ball => ball.release());
-            this.paddle.x = event.touchPos[0] - this.paddle.width / 2;
+            this.paddle_vel_x = ((event.touchPos[0] - this.paddle.mid_x()) > 0 ? 1 : -1) * calc_x_vel_paddle();
+        });
+        touchListener.registerCallBack("touchend", () => true, (event) => {
+            this.paddle_vel_x = 0;
         });
     }
     add_ball() {
@@ -170,7 +176,7 @@ class Game extends SquareAABBCollidable {
                 if (brick === this.paddle) {
                     if (b.direction[1] > 0) {
                         //b.direction[1] *= -1;
-                        const angle = ((b.mid_x() - brick.x) / brick.width) * Math.PI;
+                        const angle = Math.round(((b.mid_x() - brick.x) / brick.width) * Math.PI * 20) / 20;
                         const mag = Math.sqrt(b.direction[0] * b.direction[0] + b.direction[1] * b.direction[1]);
                         b.direction[0] = Math.cos(angle) * mag * -1;
                         b.direction[1] = Math.sin(angle) * mag * -1;
@@ -256,10 +262,10 @@ async function main() {
                 game.balls.forEach(ball => ball.release());
                 break;
             case ("ArrowLeft"):
-                game.paddle_vel_x = -320;
+                game.paddle_vel_x = -calc_x_vel_paddle();
                 break;
             case ("ArrowRight"):
-                game.paddle_vel_x = 320;
+                game.paddle_vel_x = calc_x_vel_paddle();
                 break;
             case ("ArrowUp"):
                 break;
