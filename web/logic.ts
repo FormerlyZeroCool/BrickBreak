@@ -205,15 +205,13 @@ class Game extends SquareAABBCollidable {
                 const b = <Ball> ball;
                 if(brick === this.paddle)
                 {
-                    if(!isTouchSupported())
-                        b.direction[0] += this.paddle_vel_x / 3;
-                    else
-                    {
-                        b.direction[0] += this.last_dx * 15;
-                    }
                     if(b.direction[1] > 0)
                     {
-                        b.direction[1] *= -1;
+                        //b.direction[1] *= -1;
+                        const angle = ((b.mid_x() - brick.x) / brick.width) * Math.PI;
+                        const mag = Math.sqrt(b.direction[0] * b.direction[0] + b.direction[1] * b.direction[1]);
+                        b.direction[0] = Math.cos(angle) * mag * -1;
+                        b.direction[1] = Math.sin(angle) * mag * -1;
                         b.y = brick.y - b.height;
                     }
                 }
@@ -323,7 +321,7 @@ async function main()
                         
                     break;
                     case("ArrowDown"):
-                        
+                        game.add_ball();
                     break;
                 }
     });
