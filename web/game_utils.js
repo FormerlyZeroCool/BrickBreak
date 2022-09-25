@@ -100,8 +100,8 @@ export class SpatialHashMap2D {
             {
                 const grid_x = Math.floor((collidable.x) / screen_width * cells_horizontal);
                 const grid_y = Math.floor((collidable.y) / screen_height * cells_vertical);
-                for (let y = 0; y < dy; y++) {
-                    for (let x = 0; x < dx && x + grid_x < cells_horizontal; x++) {
+                for (let y = 0; y <= dy; y++) {
+                    for (let x = 0; x <= dx && x + grid_x < cells_horizontal; x++) {
                         const cell = this.data[grid_x + x + (grid_y + y) * cells_horizontal];
                         if (cell)
                             cell.push_collidable_not_with_self(collidable);
@@ -116,8 +116,8 @@ export class SpatialHashMap2D {
             {
                 const grid_x = Math.floor((collidable.x) / screen_width * cells_horizontal);
                 const grid_y = Math.floor((collidable.y) / screen_height * cells_vertical);
-                for (let y = 0; y < dy; y++) {
-                    for (let x = 0; x < dx; x++) {
+                for (let y = 0; y <= dy; y++) {
+                    for (let x = 0; x <= dx; x++) {
                         const cell = this.data[grid_x + x + (grid_y + y) * cells_horizontal];
                         if (cell)
                             cell.push_collidable(collidable);
