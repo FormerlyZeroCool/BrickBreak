@@ -15,7 +15,7 @@ class Ball extends SquareAABBCollidable {
     release() {
         if (!this.released()) {
             srand(Math.random());
-            this.direction = [(random() - 0.5) * 400, random() * -400 - 100];
+            this.direction = [(random() - 0.5) * getWidth() / 3, -random() * getHeight() / 2 - 100];
         }
     }
     mid_x() {
@@ -91,6 +91,7 @@ class Brick extends SquareAABBCollidable {
 class Game extends SquareAABBCollidable {
     constructor(touchListener, x, y, width, height) {
         super(x, y, width, height);
+        this.last_dx = 0;
         this.bricks = [];
         this.paddle_vel_x = 0;
         this.paddle = new Brick(width / 2 - width * 0.05, height * 0.95, width * 0.1, height * 0.05);
@@ -98,6 +99,13 @@ class Game extends SquareAABBCollidable {
         this.add_ball();
         this.bricks.push(this.paddle);
         this.init(width, height);
+        touchListener.registerCallBack("touchmove", () => true, (event) => {
+            this.last_dx = event.deltaX;
+            this.paddle.x = event.touchPos[0] - this.paddle.width / 2;
+        });
+        touchListener.registerCallBack("touchend", () => true, (event) => {
+            this.balls.forEach(ball => ball.release());
+        });
     }
     add_ball() {
         this.balls.push(new Ball(this.paddle.mid_x(), this.paddle.y - this.height * 0.05, this.height * 0.025));
@@ -125,7 +133,7 @@ class Game extends SquareAABBCollidable {
             brick.width = brick_width;
             brick.height = brick_height;
         }
-        this.paddle.width *= 3;
+        this.paddle.width *= height > width ? 5 : 3;
         this.balls.forEach(ball => {
             const px = ball.x / this.width;
             const py = ball.y / this.height;
@@ -159,7 +167,11 @@ class Game extends SquareAABBCollidable {
             if (ball.radius && brick.collides_with_circle(ball)) {
                 const b = ball;
                 if (brick === this.paddle) {
-                    b.direction[0] += this.paddle_vel_x / 3;
+                    if (!isTouchSupported())
+                        b.direction[0] += this.paddle_vel_x / 3;
+                    else {
+                        b.direction[0] += this.last_dx * 15;
+                    }
                     if (b.direction[1] > 0) {
                         b.direction[1] *= -1;
                         b.y = brick.y - b.height;
@@ -279,7 +291,7 @@ async function main() {
         if (getWidth() !== canvas.width || getHeight() !== canvas.height) {
             game.resize(getWidth(), getHeight());
             canvas.width = game.width;
-            canvas.height = game.height - 25;
+            canvas.height = game.height - (isTouchSupported() ? 125 : 25);
             game.resize(canvas.width, canvas.height);
             //console.log(game.width, game.height);
         }
