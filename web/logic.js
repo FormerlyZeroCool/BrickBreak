@@ -72,7 +72,7 @@ class Brick extends SquareAABBCollidable {
     constructor(x, y, width, height) {
         super(x, y, width, height);
         this.type_id = Math.floor(random() * 15) + 1;
-        this.hp = this.type_id;
+        this.hp = Math.floor(this.type_id / 4);
     }
     take_damage(damage) {
         this.hp -= damage;
