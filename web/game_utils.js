@@ -25,7 +25,10 @@ export class SquareAABBCollidable {
     collides_with_circle(circle) {
         const dx = Math.abs(circle.mid_x() - this.mid_x());
         const dy = Math.abs(circle.mid_y() - this.mid_y());
-        if (dx > (this.width / 2 + circle.radius) || dy > (this.height / 2 + circle.radius)) {
+        if (dx > (this.width / 2 + circle.radius)) {
+            return false;
+        }
+        if (dy > (this.height / 2 + circle.radius)) {
             return false;
         }
         if (dx <= (this.width / 2) || dy <= (this.height / 2)) {

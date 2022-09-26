@@ -95,6 +95,8 @@ const keyboardHandler = new KeyboardHandler();
 class Game extends SquareAABBCollidable {
     constructor(touchListener, x, y, width, height) {
         super(x, y, width, height);
+        this.paddle_accel_x = 0;
+        this.paddle_target_vel_x = calc_x_vel_paddle();
         this.last_dx = 0;
         this.bricks = [];
         this.paddle_vel_x = 0;
@@ -106,14 +108,16 @@ class Game extends SquareAABBCollidable {
         touchListener.registerCallBack("touchmove", () => true, (event) => {
             this.last_dx = event.deltaX;
             this.paddle_target_x = event.touchPos[0];
-            this.paddle_vel_x = ((event.touchPos[0] - this.paddle.mid_x()) > 0 ? 1 : -1) * calc_x_vel_paddle() * 2;
+            //this.paddle_vel_x = ((event.touchPos[0] - this.paddle.mid_x()) > 0 ? 1 : -1) * calc_x_vel_paddle() * 2;
+            this.paddle_accel_x = (event.touchPos[0] - this.paddle.mid_x() > 0 ? 1 : -1) * calc_x_accel_paddle() * 3;
         });
         touchListener.registerCallBack("touchstart", () => true, (event) => {
             this.balls.forEach(ball => ball.release());
-            this.paddle_vel_x = ((event.touchPos[0] - this.paddle.mid_x()) > 0 ? 1 : -1) * calc_x_vel_paddle() * 2;
+            this.paddle_accel_x = ((event.touchPos[0] - this.paddle.mid_x()) > 0 ? 1 : -1) * calc_x_accel_paddle() * 3;
         });
         touchListener.registerCallBack("touchend", () => true, (event) => {
             this.paddle_vel_x = 0;
+            this.paddle_accel_x = 0;
         });
     }
     add_ball() {
@@ -198,7 +202,7 @@ class Game extends SquareAABBCollidable {
                         if (b.direction[0] < 0)
                             b.direction[0] *= -1;
                     }
-                    else if (ball.mid_y() + b.radius - brick.y < 10) {
+                    if (ball.mid_y() + b.radius - brick.y < 10) {
                         if (b.direction[1] > 0)
                             b.direction[1] *= -1;
                     }
@@ -233,9 +237,17 @@ class Game extends SquareAABBCollidable {
             this.add_ball();
             //this.init(this.height, this.width);
         }
-        if (Math.abs(this.paddle_target_x - this.paddle.mid_x()) > this.paddle.width / 10 ||
-            (keyboardHandler.keysHeld["ArrowLeft"] || keyboardHandler.keysHeld["ArrowRight"]))
+        this.paddle_vel_x += Math.abs(this.paddle_vel_x) < this.paddle_target_vel_x ?
+            this.paddle_accel_x * delta_time / 1000 :
+            0;
+        if (Math.abs(this.paddle.mid_x() - this.paddle_target_x) < this.paddle.width / 4) {
+            this.paddle_vel_x /= 2;
+            this.paddle_accel_x /= 2;
+        }
+        //if((keyboardHandler.keysHeld["ArrowLeft"] || keyboardHandler.keysHeld["ArrowRight"]))
+        {
             this.paddle.x += this.paddle_vel_x * delta_time / 1000;
+        }
         if (this.paddle.x > this.width) {
             this.paddle.x = -this.paddle.width;
         }
@@ -245,6 +257,9 @@ class Game extends SquareAABBCollidable {
     }
 }
 ;
+function calc_x_accel_paddle() {
+    return calc_x_vel_paddle() * 2;
+}
 async function main() {
     const canvas = document.getElementById("screen");
     const touchListener = new SingleTouchListener(canvas, false, true, false);
@@ -261,16 +276,20 @@ async function main() {
     let height = getHeight();
     let width = getWidth();
     let game = new Game(touchListener, 0, 0, height, width);
+    window.game = game;
+    //setInterval(() => {for(let i = 0; i < 200; i++) game.add_ball(); game.balls.forEach(ball => ball.release());}, 50)
     keyboardHandler.registerCallBack("keydown", () => true, (event) => {
         switch (event.code) {
             case ("Space"):
                 game.balls.forEach(ball => ball.release());
                 break;
             case ("ArrowLeft"):
-                game.paddle_vel_x = -calc_x_vel_paddle();
+                game.paddle_accel_x = -calc_x_accel_paddle();
+                //game.paddle_vel_x = -calc_x_vel_paddle();
                 break;
             case ("ArrowRight"):
-                game.paddle_vel_x = calc_x_vel_paddle();
+                game.paddle_accel_x = calc_x_accel_paddle();
+                //game.paddle_vel_x = calc_x_vel_paddle();
                 break;
             case ("ArrowUp"):
                 break;
@@ -282,12 +301,16 @@ async function main() {
     keyboardHandler.registerCallBack("keyup", () => true, (event) => {
         switch (event.code) {
             case ("ArrowLeft"):
-                if (game.paddle_vel_x < 0)
+                if (game.paddle_vel_x < 0) {
                     game.paddle_vel_x = 0;
+                    game.paddle_accel_x = 0;
+                }
                 break;
             case ("ArrowRight"):
-                if (game.paddle_vel_x > 0)
+                if (game.paddle_vel_x > 0) {
                     game.paddle_vel_x = 0;
+                    game.paddle_accel_x = 0;
+                }
                 break;
         }
     });
