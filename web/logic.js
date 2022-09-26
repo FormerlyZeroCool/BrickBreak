@@ -291,7 +291,7 @@ function calc_x_accel_paddle() {
 }
 async function main() {
     const canvas = document.getElementById("screen");
-    const touchListener = new SingleTouchListener(canvas, false, true, false);
+    const touchListener = new SingleTouchListener(canvas, true, true, false);
     canvas.onmousemove = (event) => {
     };
     canvas.addEventListener("wheel", (e) => {

@@ -354,7 +354,7 @@ function calc_x_accel_paddle():number
 async function main()
 {
     const canvas:HTMLCanvasElement = <HTMLCanvasElement> document.getElementById("screen");
-    const touchListener = new SingleTouchListener(canvas, false, true, false);
+    const touchListener = new SingleTouchListener(canvas, true, true, false);
 
 
     canvas.onmousemove = (event:MouseEvent) => {
