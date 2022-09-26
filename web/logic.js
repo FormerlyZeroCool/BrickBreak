@@ -82,8 +82,10 @@ class Brick extends SquareAABBCollidable {
         ctx.fillStyle = new RGB(125 + 60 * this.type_id % 256, 92 * this.type_id % 256, 125 * this.type_id % 256).htmlRBG();
         ctx.strokeRect(x, y, width, height);
         ctx.fillRect(x, y, width, height);
-        ctx.fillStyle = "#000000";
-        ctx.fillText(this.hp, this.mid_x(), this.mid_y());
+        if (this.type_id !== -1) {
+            ctx.fillStyle = "#000000";
+            ctx.fillText("" + this.hp, this.mid_x(), this.mid_y());
+        }
     }
     update_state(delta_time) {
         if (this.hp <= 0) {
@@ -106,6 +108,7 @@ class Game extends SquareAABBCollidable {
         this.bricks = [];
         this.paddle_vel_x = 0;
         this.paddle = new Brick(width / 2 - width * 0.05, height * 0.95, width * 0.1, height * 0.05);
+        this.paddle.type_id = -1;
         this.balls = [];
         this.add_ball();
         this.bricks.push(this.paddle);
@@ -132,9 +135,9 @@ class Game extends SquareAABBCollidable {
         const bricks_across = 20;
         const brick_width = (width / bricks_across);
         const brick_height = (height * 0.05);
-        for (let y = 0; y < 5 * brick_height; y += brick_height) {
-            for (let x = 0; x < 19 * brick_width; x += brick_width) {
-                this.bricks.push(new Brick(x, y, brick_width, brick_height));
+        for (let y = brick_height; y < 5 * brick_height; y += brick_height) {
+            for (let x = brick_width; x < 17 * brick_width; x += brick_width) {
+                this.bricks.push(new Brick(x, y + brick_height, brick_width, brick_height));
             }
         }
     }
