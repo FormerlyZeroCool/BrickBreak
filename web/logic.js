@@ -1,6 +1,6 @@
 import { SingleTouchListener, isTouchSupported, KeyboardHandler } from './io.js';
 import { getHeight, getWidth, RGB } from './gui.js';
-import { random, srand } from './utils.js';
+import { random, srand, max_32_bit_signed } from './utils.js';
 import { SpatialHashMap2D, SquareAABBCollidable } from './game_utils.js';
 class Ball extends SquareAABBCollidable {
     constructor(x, y, radius) {
@@ -10,7 +10,7 @@ class Ball extends SquareAABBCollidable {
         this.attack_power = 1;
     }
     released() {
-        return this.direction[0] !== 0;
+        return this.direction[0] !== 0 || this.direction[1] !== 0;
     }
     release() {
         if (!this.released()) {
@@ -71,8 +71,8 @@ class Ball extends SquareAABBCollidable {
 class Brick extends SquareAABBCollidable {
     constructor(x, y, width, height) {
         super(x, y, width, height);
-        this.type_id = Math.floor(random() * 15) + 1;
-        this.hp = Math.floor(this.type_id / 4);
+        this.type_id = Math.floor(random() * 5) + 1;
+        this.hp = Math.floor(this.type_id);
     }
     take_damage(damage) {
         this.hp -= damage;
@@ -102,9 +102,20 @@ const keyboardHandler = new KeyboardHandler();
 class Paddle extends Brick {
     constructor(x, y, width, height) {
         super(x, y, width, height);
+        this.power_up_cool_down = 0;
         this.accel_x = 0;
         this.target_vel_x = calc_x_vel_paddle();
         this.vel_x = 0;
+        this.power_up_count_down = 0;
+    }
+    update_state_paddle(delta_time, game) {
+        this.update_state(delta_time);
+        if (this.x > game.width) {
+            this.x = -this.width;
+        }
+        if (this.x + this.width < 0) {
+            this.x = game.width;
+        }
     }
     update_state(delta_time) {
         this.vel_x += Math.abs(this.vel_x) < this.target_vel_x ?
@@ -118,6 +129,41 @@ class Paddle extends Brick {
         //if((keyboardHandler.keysHeld["ArrowLeft"] || keyboardHandler.keysHeld["ArrowRight"]))
         {
             this.x += this.vel_x * delta_time / 1000;
+        }
+        if (this.power_up_count_down > 0) {
+            this.power_up_count_down -= delta_time;
+        }
+        this.power_up_cool_down -= delta_time;
+    }
+    set_power_up(brick) {
+        this.power_up_type = brick;
+        this.power_up_count_down = 10 * 1000;
+    }
+    use_power_up(game) {
+        if (this.power_up_count_down > 0 && this.power_up_cool_down <= 0) {
+            this.power_up_cool_down = 500;
+            switch (this.power_up_type.type_id) {
+                case (0):
+                    game.add_ball();
+                    game.balls[game.balls.length - 1].release();
+                    break;
+                case (1):
+                    const added = game.add_ball();
+                    this.power_up_cool_down = 250;
+                    added.release();
+                    added.radius = 5;
+                    added.width = added.width / 10;
+                    added.height = added.height / 10;
+                    added.direction[0] = 0;
+                    added.direction[1] = -1 * getHeight() / 3;
+                    break;
+                case (3):
+                    break;
+                case (4):
+                    break;
+                case (5):
+                    break;
+            }
         }
     }
     draw(canvas, ctx, x = this.x, y = this.y, width = this.width, height = this.height) {
@@ -137,7 +183,7 @@ class Game extends SquareAABBCollidable {
         this.paddle.type_id = -1;
         this.balls = [];
         this.add_ball();
-        this.bricks.push(this.paddle);
+        //this.bricks.push(this.paddle);
         this.init(width, height);
         touchListener.registerCallBack("touchmove", () => true, (event) => {
             this.last_dx = event.deltaX;
@@ -156,8 +202,10 @@ class Game extends SquareAABBCollidable {
     }
     add_ball() {
         this.balls.push(new Ball(this.paddle.mid_x(), this.paddle.y - this.height * 0.05, this.height * 0.025));
+        return this.balls[this.balls.length - 1];
     }
     init(width, height) {
+        srand(Math.random() * max_32_bit_signed);
         const bricks_across = 20;
         const brick_width = (width / bricks_across);
         const brick_height = (height * 0.05);
@@ -180,6 +228,10 @@ class Game extends SquareAABBCollidable {
             brick.width = brick_width;
             brick.height = brick_height;
         }
+        const px = this.paddle.x / this.width;
+        const py = this.paddle.y / this.height;
+        this.paddle.x = px * width;
+        this.paddle.y = py * height;
         this.paddle.width = brick_width * (height > width ? 4 : 3);
         this.balls.forEach(ball => {
             const px = ball.x / this.width;
@@ -209,17 +261,9 @@ class Game extends SquareAABBCollidable {
         if (this.bricks.length === 1) {
             this.init(this.width, this.height);
         }
-        this.collision_map = new SpatialHashMap2D(this.balls.concat(this.bricks), [], this.width, this.height, 20, 20);
+        this.collision_map = new SpatialHashMap2D(this.balls.concat([this.paddle]), this.bricks, this.width, this.height, 20, 20);
         this.collision_map.handle_by_cell((ball, brick) => {
-            if (ball === this.paddle && brick.hp !== undefined && brick.hp <= 0) {
-                const falling = brick;
-                if (falling.hp <= 0) {
-                    const tdb_index = this.bricks.indexOf(falling);
-                    if (tdb_index >= 0)
-                        this.bricks.splice(tdb_index, 1);
-                }
-            }
-            else if (ball.radius && brick.collides_with_circle(ball)) {
+            if (ball.radius && brick.collides_with_circle(ball)) {
                 const b = ball;
                 if (brick === this.paddle) {
                     if (b.direction[1] > 0) {
@@ -239,35 +283,55 @@ class Game extends SquareAABBCollidable {
                             b.direction[1] += -80;
                     }
                 }
-                else if (brick.hp > 0) {
-                    b.hit(brick);
-                    const bri = brick;
-                    if ((ball.mid_x() + b.radius - brick.x) < 10) {
-                        if (b.direction[0] > 0)
-                            b.direction[0] *= -1;
-                    }
-                    else if ((ball.mid_x() - brick.x - brick.width) > -10) {
-                        if (b.direction[0] < 0)
-                            b.direction[0] *= -1;
-                    }
-                    if (ball.mid_y() + b.radius - brick.y < 10) {
-                        if (b.direction[1] > 0)
-                            b.direction[1] *= -1;
-                    }
-                    else if (ball.mid_y() - brick.y - brick.height > -10) {
-                        if (b.direction[1] < 0)
-                            b.direction[1] *= -1;
-                    }
-                    b.update_state(delta_time);
-                    /*if(bri.hp <= 0)
-                    {
-                        const tdb_index = this.bricks.indexOf(bri);
-                        if(tdb_index >= 0)
-                            this.bricks.splice(tdb_index, 1);
-                    }*/
+            }
+        }, (a, b) => {
+            const brick = b;
+            const ball = a;
+            if (a === this.paddle && brick.hp !== undefined && brick.hp <= 0) {
+                const falling = brick;
+                if (falling.hp <= 0) {
+                    const tdb_index = this.bricks.indexOf(falling);
+                    a.set_power_up(brick);
+                    if (tdb_index >= 0)
+                        this.bricks.splice(tdb_index, 1);
                 }
             }
-        }, (a, b) => { });
+            else if (ball.radius && (brick).hp > 0 && brick !== this.paddle) {
+                const collision_code = brick.collides_with_circle(ball);
+                //collision code 0 no collision
+                //1 corner collision
+                //2 edge collision
+                if (collision_code !== 0) {
+                    ball.hit(brick);
+                    const bri = brick;
+                    if (collision_code === 1 || (ball.mid_y() - ball.radius > brick.y + brick.height || ball.mid_y() + ball.radius < brick.y))
+                        if ((ball.mid_x() + ball.radius - brick.x) < 10) {
+                            if (ball.direction[0] > 0)
+                                ball.direction[0] *= -1;
+                        }
+                        else if ((ball.mid_x() - brick.x - brick.width) > -10) {
+                            if (ball.direction[0] < 0)
+                                ball.direction[0] *= -1;
+                        }
+                    if (collision_code === 1 || (ball.mid_x() - ball.radius > brick.y + brick.width || ball.mid_x() + ball.radius < brick.x))
+                        if (ball.mid_y() + ball.radius - brick.y < 10) {
+                            if (ball.direction[1] > 0)
+                                ball.direction[1] *= -1;
+                        }
+                        else if (ball.mid_y() - brick.y - brick.height > -10) {
+                            if (ball.direction[1] < 0)
+                                ball.direction[1] *= -1;
+                        }
+                    ball.update_state(delta_time);
+                }
+                /*if(bri.hp <= 0)
+                {
+                    const tdb_index = this.bricks.indexOf(bri);
+                    if(tdb_index >= 0)
+                        this.bricks.splice(tdb_index, 1);
+                }*/
+            }
+        });
         for (let i = 0; i < this.balls.length; i++) {
             const ball = this.balls[i];
             ball.update_state(delta_time);
@@ -290,13 +354,7 @@ class Game extends SquareAABBCollidable {
         //relies on coercing undefined to be false, and false to 0
         if (!isTouchSupported())
             this.paddle.accel_x = calc_x_accel_paddle() * +(keyboardHandler.keysHeld["ArrowRight"] >= 1) - calc_x_accel_paddle() * +(keyboardHandler.keysHeld["ArrowLeft"] >= 1);
-        this.paddle.update_state(delta_time);
-        if (this.paddle.x > this.width) {
-            this.paddle.x = -this.paddle.width;
-        }
-        if (this.paddle.x + this.paddle.width < 0) {
-            this.paddle.x = this.width;
-        }
+        this.paddle.update_state_paddle(delta_time, this);
         for (let i = 0; i < this.bricks.length; i++) {
             const bri = this.bricks[i];
             bri.update_state(delta_time);
@@ -333,6 +391,7 @@ async function main() {
                 game.balls.forEach(ball => ball.release());
                 break;
             case ("ArrowUp"):
+                game.paddle.use_power_up(game);
                 break;
             case ("ArrowDown"):
                 game.add_ball();

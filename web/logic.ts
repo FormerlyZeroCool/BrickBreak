@@ -16,7 +16,7 @@ class Ball extends SquareAABBCollidable implements Circle {
     }
     released():boolean
     {
-        return this.direction[0] !== 0;
+        return this.direction[0] !== 0 || this.direction[1] !== 0;
     }
     release():void
     {
@@ -87,8 +87,8 @@ class Brick extends SquareAABBCollidable {
     constructor(x:number, y:number, width:number, height:number)
     {
         super(x, y, width, height);
-        this.type_id = Math.floor(random() * 15) + 1;
-        this.hp = Math.floor(this.type_id / 4);
+        this.type_id = Math.floor(random() * 5) + 1;
+        this.hp = Math.floor(this.type_id);
     }
     take_damage(damage:number):void
     {
@@ -126,14 +126,32 @@ class Paddle extends Brick {
     target_vel_x:number;
     accel_x:number;
     target_x:number;
+    power_up_count_down:number;
+    power_up_cool_down:number;
+    power_up_type:Brick;
+
     constructor(x:number, y:number, width:number, height:number)
     {
         super(x, y, width, height);
+        this.power_up_cool_down = 0;
         this.accel_x = 0;
         this.target_vel_x = calc_x_vel_paddle();
         this.vel_x = 0;
+        this.power_up_count_down = 0;
     }
-    update_state(delta_time: number): void {
+    update_state_paddle(delta_time:number, game:Game):void
+    {
+        this.update_state(delta_time);
+        if(this.x > game.width)
+        {
+            this.x = -this.width;
+        }
+        if(this.x + this.width < 0)
+        {
+            this.x = game.width;
+        }
+    }
+    update_state(delta_time:number): void {
         
         this.vel_x += Math.abs(this.vel_x) < this.target_vel_x ? 
         this.accel_x * delta_time / 1000 : 
@@ -147,6 +165,46 @@ class Paddle extends Brick {
         //if((keyboardHandler.keysHeld["ArrowLeft"] || keyboardHandler.keysHeld["ArrowRight"]))
         {
             this.x += this.vel_x * delta_time / 1000;
+        }
+        if(this.power_up_count_down > 0)
+        {
+            this.power_up_count_down -= delta_time;
+        }
+        this.power_up_cool_down -= delta_time;
+    }
+    set_power_up(brick:Brick):void
+    {
+        this.power_up_type = brick;
+        this.power_up_count_down = 10 * 1000;
+    }
+    use_power_up(game:Game):void
+    {
+        if(this.power_up_count_down > 0 && this.power_up_cool_down <= 0)
+        {
+            this.power_up_cool_down = 500;
+            switch(this.power_up_type.type_id)
+            {
+                case(0):
+                game.add_ball();
+                game.balls[game.balls.length - 1].release();
+                break;
+                case(1):
+                const added = game.add_ball();
+                this.power_up_cool_down = 250;
+                added.release();
+                added.radius = 5;
+                added.width = added.width / 10;
+                added.height = added.height / 10;
+                added.direction[0] = 0;
+                added.direction[1] = -1 * getHeight() / 3;
+                break;
+                case(3):
+                break;
+                case(4):
+                break;
+                case(5):
+                break;
+            }
         }
     }
     draw(canvas: HTMLCanvasElement, ctx: CanvasRenderingContext2D, x: number = this.x, y: number = this.y, width: number = this.width, height: number = this.height): void {
@@ -174,7 +232,7 @@ class Game extends SquareAABBCollidable {
         this.paddle.type_id = -1;
         this.balls = [];
         this.add_ball();
-        this.bricks.push(this.paddle);
+        //this.bricks.push(this.paddle);
         this.init(width, height);
         touchListener.registerCallBack("touchmove", () => true, (event:TouchMoveEvent) => {
             this.last_dx = event.deltaX;
@@ -191,12 +249,14 @@ class Game extends SquareAABBCollidable {
             this.paddle.accel_x = 0;
         });
     }
-    add_ball():void
+    add_ball():Ball
     {
         this.balls.push(new Ball(this.paddle.mid_x(), this.paddle.y - this.height * 0.05, this.height * 0.025));
+        return this.balls[this.balls.length - 1];
     }
     init(width:number, height:number):void
     {
+        srand(Math.random() * max_32_bit_signed);
         const bricks_across = 20;
         const brick_width = (width / bricks_across);
         const brick_height = (height * 0.05);
@@ -223,6 +283,11 @@ class Game extends SquareAABBCollidable {
             brick.width = brick_width;
             brick.height = brick_height;
         }
+
+        const px = this.paddle.x / this.width;
+        const py = this.paddle.y / this.height;
+        this.paddle.x = px * width;
+        this.paddle.y = py * height;
         this.paddle.width = brick_width *  (height > width ? 4 : 3);
         this.balls.forEach(ball => {
             const px = ball.x / this.width;
@@ -255,20 +320,11 @@ class Game extends SquareAABBCollidable {
         {
             this.init(this.width, this.height);
         }
-        this.collision_map = new SpatialHashMap2D(this.balls.concat(this.bricks), [], this.width, this.height, 20, 20);
+        this.collision_map = new SpatialHashMap2D(this.balls.concat([this.paddle]), this.bricks, this.width, this.height, 20, 20);
         this.collision_map.handle_by_cell( 
         (ball:SquareAABBCollidable, brick:SquareAABBCollidable) => {
-            if(ball === this.paddle && brick.hp !== undefined && brick.hp <= 0)
-            {
-                const falling:Brick = <Brick> brick;
-                if(falling.hp <= 0)
-                    {
-                        const tdb_index = this.bricks.indexOf(falling);
-                        if(tdb_index >= 0)
-                            this.bricks.splice(tdb_index, 1);
-                    }
-            }
-            else if((<Ball> ball).radius && brick.collides_with_circle(<Ball> ball))
+            
+            if((<Ball> ball).radius && brick.collides_with_circle(<Ball> ball))
             {
                 const b = <Ball> ball;
                 if(brick === this.paddle)
@@ -292,32 +348,57 @@ class Game extends SquareAABBCollidable {
                         if(b.direction[1] > -120)
                             b.direction[1] += -80;
                     }
-                }
-                else if((<Brick> brick).hp > 0)
+                } 
+
+            }
+        }, (a:SquareAABBCollidable, b:SquareAABBCollidable) => {
+            const brick:Brick = <Brick> b;
+            const ball:Ball = <Ball> a;
+            if(a === this.paddle && brick.hp !== undefined && brick.hp <= 0)
+            {
+                const falling:Brick = <Brick> brick;
+                if(falling.hp <= 0)
                 {
-                    b.hit(<Brick> brick);
-                    const bri = <Brick> brick;
-                    if((ball.mid_x() + b.radius - brick.x) < 10) 
+                    const tdb_index = this.bricks.indexOf(falling);
+                    (<Paddle> a).set_power_up(brick);
+                    if(tdb_index >= 0)
+                        this.bricks.splice(tdb_index, 1);
+                }
+            }
+            else if(ball.radius && (brick).hp > 0 && brick !== this.paddle)
+                {
+                    const collision_code = brick.collides_with_circle(ball);
+                    //collision code 0 no collision
+                    //1 corner collision
+                    //2 edge collision
+                    if(collision_code !== 0)
                     {
-                        if(b.direction[0] > 0)
-                            b.direction[0] *= -1;
+                        ball.hit(<Brick> brick);
+                        const bri = <Brick> brick;
+                        if(collision_code === 1 || (ball.mid_y() - ball.radius > brick.y + brick.height || ball.mid_y() + ball.radius < brick.y))
+                        if((ball.mid_x() + ball.radius - brick.x) < 10) 
+                        {
+                            if(ball.direction[0] > 0)
+                                ball.direction[0] *= -1;
+                        }
+                        else if((ball.mid_x() - brick.x - brick.width) > -10) 
+                        {
+                            if(ball.direction[0] < 0)
+                                ball.direction[0] *= -1;
+                        }
+                        if(collision_code === 1 || (ball.mid_x() - ball.radius > brick.y + brick.width || ball.mid_x() + ball.radius < brick.x))
+                        if(ball.mid_y() + ball.radius - brick.y < 10)
+                        {
+                            if(ball.direction[1] > 0)
+                                ball.direction[1] *= -1;
+                        }
+                        else if(ball.mid_y() - brick.y - brick.height > -10)
+                        {
+                            if(ball.direction[1] < 0)
+                                ball.direction[1] *= -1;
+                        }
+                        ball.update_state(delta_time);
                     }
-                    else if((ball.mid_x() - brick.x - brick.width) > -10) 
-                    {
-                        if(b.direction[0] < 0)
-                            b.direction[0] *= -1;
-                    }
-                     if(ball.mid_y() + b.radius - brick.y < 10)
-                    {
-                        if(b.direction[1] > 0)
-                            b.direction[1] *= -1;
-                    }
-                    else if(ball.mid_y() - brick.y - brick.height > -10)
-                    {
-                        if(b.direction[1] < 0)
-                            b.direction[1] *= -1;
-                    }
-                    b.update_state(delta_time);
                     /*if(bri.hp <= 0)
                     {
                         const tdb_index = this.bricks.indexOf(bri);
@@ -325,9 +406,7 @@ class Game extends SquareAABBCollidable {
                             this.bricks.splice(tdb_index, 1);
                     }*/
                 }
-
-            }
-        }, (a:SquareAABBCollidable, b:SquareAABBCollidable) => {});
+        });
         for(let i = 0; i < this.balls.length; i++)
         {
             const ball = this.balls[i];
@@ -355,15 +434,7 @@ class Game extends SquareAABBCollidable {
         if(!isTouchSupported())
             this.paddle.accel_x = calc_x_accel_paddle() * +(keyboardHandler.keysHeld["ArrowRight"] >= 1) - calc_x_accel_paddle() * +(keyboardHandler.keysHeld["ArrowLeft"] >= 1);
 
-        this.paddle.update_state(delta_time);
-        if(this.paddle.x > this.width)
-        {
-            this.paddle.x = -this.paddle.width;
-        }
-        if(this.paddle.x + this.paddle.width < 0)
-        {
-            this.paddle.x = this.width;
-        }
+        this.paddle.update_state_paddle(delta_time, this);
         for(let i = 0; i < this.bricks.length; i++)
         {
             const bri = this.bricks[i];
@@ -407,7 +478,7 @@ async function main()
                     break;
                    
                     case("ArrowUp"):
-                        
+                        game.paddle.use_power_up(game);
                     break;
                     case("ArrowDown"):
                         game.add_ball();

@@ -61,20 +61,20 @@ export class SquareAABBCollidable implements Collidable, GameObject {
         this.width = width;
         this.height = height;
     }
-    collides_with_circle(circle:Circle)
+    collides_with_circle(circle:Circle):number
     {
         const dx = Math.abs(circle.mid_x() - this.mid_x());
         const dy = Math.abs(circle.mid_y() - this.mid_y());
 
-        if (dx > (this.width/2 + circle.radius)) { return false; }
-        if(dy > (this.height/2 + circle.radius)) { return false; }
+        if (dx > (this.width/2 + circle.radius)) { return 0; }
+        if(dy > (this.height/2 + circle.radius)) { return 0; }
 
-        if (dx <= (this.width/2) || dy <= (this.height/2)) { return true; }
+        if (dx <= (this.width/2) || dy <= (this.height/2)) { return 2; }
 
         const cornerDistance_sq = (dx - this.width/2) * (dx - this.width/2) +
             (dy - this.height/2) * (dy - this.height/2);
 
-        return (cornerDistance_sq <= (circle.radius * circle.radius));
+        return +(cornerDistance_sq <= (circle.radius * circle.radius));
     }
     draw(canvas: HTMLCanvasElement, ctx: CanvasRenderingContext2D, x: number, y: number, width: number, height: number): void {
         throw new Error('Method not implemented.');
