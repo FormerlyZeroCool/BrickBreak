@@ -5,6 +5,27 @@ export function distance(a, b) {
     const dy = a.mid_y() - b.mid_y();
     return Math.sqrt(dx * dx + dy * dy);
 }
+export function non_elastic_no_angular_momentum_bounce_vector(direction_vector, normal_vector) {
+    const mag = magnitude(direction_vector[0], direction_vector[1]);
+    const collision_vector = normalize2D(normal_vector);
+    const ndirection = normalize2D(direction_vector);
+    const u = scalar_product_2d(dot_product_2d(ndirection, collision_vector), collision_vector);
+    const w = [ndirection[0] - u[0], ndirection[1] - u[1]];
+    return [(w[0] - u[0]) * mag, (w[1] - u[1]) * mag];
+}
+export function magnitude(a, b) {
+    return Math.sqrt(a * a + b * b);
+}
+export function scalar_product_2d(a, b) {
+    return [a * b[0], a * b[1]];
+}
+export function dot_product_2d(a, b) {
+    return a[0] * b[0] + a[1] * b[1];
+}
+export function normalize2D(vector) {
+    const mag = magnitude(vector[0], vector[1]);
+    return [vector[0] / mag, vector[1] / mag];
+}
 export function manhattan_distance(a, b) {
     const dx = Math.abs(a.mid_x() - b.mid_x());
     const dy = Math.abs(a.mid_y() - b.mid_y());
