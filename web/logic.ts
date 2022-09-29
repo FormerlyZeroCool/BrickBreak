@@ -1,8 +1,138 @@
 import {SingleTouchListener, TouchMoveEvent, MouseDownTracker, isTouchSupported, KeyboardHandler} from './io.js'
 import {RegularPolygon, getHeight, getWidth, RGB} from './gui.js'
-import {random, srand, max_32_bit_signed, get_angle, logToServer, logBinaryToServer, readFromServer, sleep} from './utils.js'
+import {random, srand, max_32_bit_signed, FixedSizeQueue} from './utils.js'
 import {non_elastic_no_angular_momentum_bounce_vector, magnitude, dot_product_2d, scalar_product_2d, normalize2D, distance, GameObject, menu_font_size, SpatialHashMap2D, SquareAABBCollidable, Circle } from './game_utils.js'
+class PowerUp {
+    type_id:number;
+    init_count_down:number;
+    init_cool_down:number;
+    power_up_count_down:number;
+    power_up_cool_down:number;
+    constructor(type_id:number, init_count_down:number, init_cool_down:number)
+    {
+        this.type_id = type_id;
+        this.init_cool_down = init_cool_down;
+        this.init_count_down = init_count_down;
+        this.power_up_cool_down = 0;
+        this.power_up_count_down = 0;
+    }
+    use(game:Game):void {}
+    update_state(delta_time:number, game:Game):void {}
+    desc():string { return "None"; }
+};
+function use_super(power_up:PowerUp, game:Game):void
+{
+    if(power_up.power_up_cool_down <= 0 && power_up.power_up_count_down >= 0)
+    {
+        power_up.use(game);
+    }
+}
+function update_state_super(power_up:PowerUp, dt:number, game:Game):void
+{
+    power_up.power_up_count_down -= dt;
+    power_up.power_up_cool_down -= dt;
+    power_up.update_state(dt / 10, game);
+}
+const default_count_down = 10 * 10000;
+class PowerUpExtraPoints extends PowerUp {
+    constructor()
+    {
+        super(1, default_count_down, 0);
+    }
+    use(game:Game):void {}
+    update_state(delta_time:number, game:Game):void { game.score += delta_time * 2; }
+    desc(): string {
+        return "Extra Points";
+    }
+}
+class PowerUpRandomBall extends PowerUp {
 
+    constructor()
+    {
+        super(2, default_count_down, 750);
+    }
+    use(game:Game):void 
+    {
+        this.power_up_cool_down = this.init_cool_down;
+        game.add_ball().release();
+    }
+    update_state(delta_time:number, game:Game):void { game.score += delta_time; }
+    desc(): string {
+        return `Press Space to shoot random balls every ${Math.floor(this.init_cool_down / 10) / 100} seconds.`;
+    }
+}
+class PowerUpDoubleWide extends PowerUp {
+
+    constructor()
+    {
+        super(3, default_count_down, 0);
+    }
+    use(game:Game):void {  }
+    update_state(delta_time:number, game:Game):void 
+    { 
+        game.score += delta_time; 
+        game.paddle.width = game.paddle.unscaled_width * 2; 
+    }
+    desc(): string {
+        return `Double wide paddle.`;
+    }
+}
+class PowerUpDoubleAndAHalfWide extends PowerUp {
+
+    constructor()
+    {
+        super(4, default_count_down, 250);
+    }
+    use(game:Game):void 
+    { 
+        const added = game.add_ball();
+        this.power_up_cool_down = 250;
+        added.release();
+        added.radius = 5;
+        added.width = 10;
+        added.height = 10;
+        added.direction[0] = 0;
+        added.direction[1] = -1 * getHeight() / 3;
+     }
+    update_state(delta_time:number, game:Game):void 
+    { 
+        game.score += delta_time; 
+        game.paddle.width = game.paddle.unscaled_width * 2.5; 
+    }
+    desc(): string {
+        return `Press Space to shoot tiny balls directly upwards every ${Math.floor(this.init_cool_down / 10) / 100} seconds.`;
+    }
+}
+class PowerUpSuperBall extends PowerUp {
+
+    constructor()
+    {
+        super(5, default_count_down, default_count_down);
+    }
+    use(game:Game):void 
+    { 
+        const added = game.add_ball();
+        this.power_up_cool_down = this.power_up_count_down;
+        added.release();
+        added.radius = Math.floor(game.width * 0.1);
+        added.width =  Math.floor(game.width * 0.2);
+        added.y -= added.width;
+        added.height = Math.floor(game.width * 0.2);
+        added.direction[0] = 0;
+        added.direction[1] = -1 * getHeight() / 3;
+    }
+    update_state(delta_time:number, game:Game):void 
+    { 
+        game.score += delta_time; 
+        game.paddle.width = game.paddle.unscaled_width * 1; 
+    }
+    desc(): string {
+        return `Press Space to shoot super ball every ${Math.floor(this.init_cool_down / 10) / 100} seconds.`;
+    }
+}
+const power_ups:PowerUp[] = []
+power_ups.push(new PowerUp(0, 0, 0), new PowerUpExtraPoints(), new PowerUpRandomBall(), new PowerUpDoubleWide(), 
+        new PowerUpDoubleAndAHalfWide(), new PowerUpSuperBall());
 class Ball extends SquareAABBCollidable implements Circle {
     radius:number;
     direction:number[];
@@ -63,8 +193,8 @@ class Ball extends SquareAABBCollidable implements Circle {
         }
         else if(this.y + this.height >= y + height)
         {
-            if(this.direction[1] > 0)
-                this.direction[1] *= -1;
+            //if(this.direction[1] > 0)
+              //  this.direction[1] *= -1;
             return true;
         }
         else if(this.y <= 0)
@@ -88,7 +218,7 @@ class Brick extends SquareAABBCollidable {
     constructor(x:number, y:number, width:number, height:number)
     {
         super(x, y, width, height);
-        this.type_id = Math.floor(random() * 5) + 1;
+        this.type_id = Math.floor(random() * (power_ups.length - 1)) + 1;
         this.hp = Math.floor(this.type_id);
         const radius = Math.min(this.width, this.height) / 2;
         this.polygon = new RegularPolygon(radius, this.type_id + 2);
@@ -131,26 +261,26 @@ function calc_x_vel_paddle():number
     return Math.max(getWidth(), getHeight()) / (isTouchSupported() ? 1 : 2);
 }
 const keyboardHandler:KeyboardHandler = new KeyboardHandler();
+
 class Paddle extends Brick {
 
     vel_x:number;
     target_vel_x:number;
     accel_x:number;
     target_x:number;
-    power_up_count_down:number;
-    power_up_cool_down:number;
-    power_up_type:Brick;
+    power_up_type:PowerUp;
     unscaled_width:number;
+    game:Game
 
-    constructor(x:number, y:number, width:number, height:number)
+    constructor(game:Game, x:number, y:number, width:number, height:number)
     {
         super(x, y, width, height);
+        this.game = game;
         this.unscaled_width = width * 2;
-        this.power_up_cool_down = 0;
         this.accel_x = 0;
         this.target_vel_x = calc_x_vel_paddle();
         this.vel_x = 0;
-        this.power_up_count_down = 0;
+        this.power_up_type = power_ups[0];
     }
     update_state_paddle(delta_time:number, game:Game):void
     {
@@ -179,64 +309,24 @@ class Paddle extends Brick {
         {
             this.x += this.vel_x * delta_time / 1000;
         }
-        if(this.power_up_count_down > 0)
-        {
-            this.power_up_count_down -= delta_time;
-            if(this.power_up_type.type_id === 3 && Math.abs(this.width - 2 * this.unscaled_width) > 0.1)
-            {
-                this.width = this.unscaled_width * 2;
-            }
-            else if(this.power_up_type.type_id === 4 && Math.abs(this.width - 2.5 * this.unscaled_width) > 0.1)
-            {
-                this.width = this.unscaled_width * 2.5;
-            }
-        }
-        this.power_up_cool_down -= delta_time;
+        update_state_super(this.power_up_type, delta_time, this.game);
         
     }
     set_power_up(brick:Brick):void
     {
-        this.power_up_type = brick;
-        this.power_up_count_down = 10 * 1000;
+        this.power_up_type = power_ups[brick.type_id]!;
+        this.power_up_type.power_up_count_down = this.power_up_type.init_count_down;
     }
     use_power_up(game:Game):void
     {
-        if(this.power_up_count_down > 0 && this.power_up_cool_down <= 0)
+        if(this.power_up_type.power_up_count_down > 0 && this.power_up_type.power_up_cool_down <= 0)
         {
-            switch(this.power_up_type.type_id)
-            {
-                case(2):
-                this.power_up_cool_down = 500;
-                game.add_ball();
-                game.balls[game.balls.length - 1].release();
-                break;
-                case(4):
-                {
-                const added = game.add_ball();
-                this.power_up_cool_down = 250;
-                added.release();
-                added.radius = 5;
-                added.width = 10;
-                added.height = 10;
-                added.direction[0] = 0;
-                added.direction[1] = -1 * getHeight() / 3;
-                }
-                break;
-                case(5):
-                {
-                const added = game.add_ball();
-                this.power_up_cool_down = this.power_up_count_down;
-                added.release();
-                added.radius = Math.floor(game.width * 0.1);
-                added.width =  Math.floor(game.width * 0.2);
-                added.y -= added.width;
-                added.height = Math.floor(game.width * 0.2);
-                added.direction[0] = 0;
-                added.direction[1] = -1 * getHeight() / 3;
-                }
-                break;
-            }
+            use_super(this.power_up_type, game);
         }
+    }
+    get_power_up_desc():string
+    {
+        return this.power_up_type.desc();
     }
     draw(canvas: HTMLCanvasElement, ctx: CanvasRenderingContext2D, x: number = this.x, y: number = this.y, width: number = this.width, height: number = this.height): void {
         
@@ -291,7 +381,7 @@ class Game extends SquareAABBCollidable {
     }
     new_paddle():void
     {
-        this.paddle = new Paddle(this.width / 2 - this.width * 0.05, this.height * 0.95, this.width * 0.1, this.height * 0.05);
+        this.paddle = new Paddle(this, this.width / 2 - this.width * 0.05, this.height * 0.95, this.width * 0.1, this.height * 0.05);
         this.paddle.type_id = -1;
     }
     restart_game():void
@@ -378,10 +468,18 @@ class Game extends SquareAABBCollidable {
         ctx.font = `${font_size}px Helvetica`;
         ctx.fillStyle = "#000000";
         ctx.strokeStyle = "#FFFFFF";
-        ctx.strokeText("Score: " + Math.floor(this.score), 0, font_size);
-        ctx.fillText("Score: " + Math.floor(this.score), 0, font_size);
-        ctx.strokeText("Lives: " + Math.floor(this.lives), 0, font_size * 2);
-        ctx.fillText("Lives: " + Math.floor(this.lives), 0, font_size * 2);
+        let text = `Score: ${Math.floor(this.score)}`;
+        let i = 1;
+        ctx.strokeText(text, 0, font_size * i);
+        ctx.fillText(text, 0, font_size * i);
+        i++;
+        ctx.strokeText("Lives: " + Math.floor(this.lives), 0, font_size * i);
+        ctx.fillText("Lives: " + Math.floor(this.lives), 0, font_size * i);
+
+        i = 0.5;
+        text = `Powerup: ${this.paddle.power_up_type.desc()}`;
+        ctx.strokeText(text, 0, this.height - font_size * i);
+        ctx.fillText(text, 0, this.height - font_size * i);
         if(this.lives <= 0)
         {
             let i = 0;
@@ -429,28 +527,6 @@ class Game extends SquareAABBCollidable {
                 if(ball_index !== -1)
                     this.balls.splice(ball_index, 1);
             }
-        }
-        //handle keeping score
-        const score_mod = delta_time / 10;
-        if(this.paddle.power_up_count_down > 0)
-        {
-            switch(this.paddle.power_up_type.type_id)
-            {
-                case(1):
-                this.score += score_mod * 2;
-                break;
-                case(2):
-                case(3):
-                case(4):
-                this.score += score_mod;
-                break;
-                case(5):
-                break;
-            }
-        }
-        else
-        {
-            this.score += score_mod / 2;
         }
         this.collision_map = new SpatialHashMap2D(this.balls.concat([this.paddle]), this.bricks, this.width, this.height, 20, 20);
         this.collision_map.handle_by_cell( 
@@ -654,8 +730,13 @@ async function main()
     const ctx:CanvasRenderingContext2D = maybectx;
     let start = Date.now();
     let dt = 1;
+    const ostart = Date.now();
+    let frame_count = 0;
+    let instantaneous_fps = 0;
+    const time_queue:FixedSizeQueue<number> = new FixedSizeQueue<number>(60 * 5);
     const drawLoop = () => 
     {
+        frame_count++;
         //do stuff and render here
         if(getWidth() !== canvas.width || getHeight() !== canvas.height)
         {
@@ -666,9 +747,25 @@ async function main()
             game.paddle.update_state_paddle(0, game);
         }
         dt = Date.now() - start;
+        time_queue.push(dt);
         start = Date.now();
+        /*for(let i = 0; i < dt; i++)
+        {
+            const ball = game.add_ball();
+            ball.release();
+        }*/
+        let sum = 0;
+        for(let i = 0; i < time_queue.length; i++)
+        {
+            sum += time_queue.get(i);
+        }
         game.update_state(dt);
         game.draw(canvas, ctx, game.x, game.y, game.width, game.height);
+        if(frame_count % 10 === 0)
+            instantaneous_fps = Math.floor(1000 / (dt));
+        ctx.strokeText(`avg fps: ${Math.floor(1000 * time_queue.length / sum)}, ins fps: ${instantaneous_fps}`, game.width / 2, menu_font_size());
+        ctx.fillText(`avg fps: ${Math.floor(1000 * time_queue.length / sum)}, ins fps: ${instantaneous_fps}`, game.width / 2, menu_font_size());
+
         requestAnimationFrame(drawLoop);
     }
     drawLoop();

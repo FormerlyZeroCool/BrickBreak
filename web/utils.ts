@@ -120,13 +120,13 @@ export class FixedSizeQueue<T> {
         {
             this.start++;
             this.data[this.end++] = val;
-            this.start &= this.data.length - 1;
-            this.end &= this.data.length - 1;
+            this.start %= this.data.length - 1;
+            this.end %= this.data.length - 1;
         }
         else
         {
             this.data[this.end++] = val; 
-            this.end &= this.data.length - 1;
+            this.end %= this.data.length - 1;
             this.length++;
         }
     }
@@ -136,7 +136,7 @@ export class FixedSizeQueue<T> {
         {
             const val = this.data[this.start];
             this.start++;
-            this.start &= this.data.length - 1;
+            this.start %= this.data.length - 1;
             this.length--;
             return val;
         }
@@ -146,7 +146,7 @@ export class FixedSizeQueue<T> {
     {
         if(index < this.length)
         {
-            return this.data[(index+this.start)&(this.data.length-1)];
+            return this.data[(index+this.start)%(this.data.length-1)];
         }
 		throw new Error(`Could not get value at index ${index}`);
     }
@@ -154,7 +154,7 @@ export class FixedSizeQueue<T> {
     {
         if(index < this.length)
         {
-            this.data[(index+this.start) & (this.data.length - 1)] = obj;
+            this.data[(index+this.start) % (this.data.length - 1)] = obj;
         }
 		throw new Error(`Could not set value at index ${index}`);
     }
