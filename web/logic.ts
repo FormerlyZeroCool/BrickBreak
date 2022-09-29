@@ -1,5 +1,5 @@
 import {SingleTouchListener, TouchMoveEvent, MouseDownTracker, isTouchSupported, KeyboardHandler} from './io.js'
-import {render_funky_regular_polygon, render_regular_polygon, getHeight, getWidth, RGB} from './gui.js'
+import {RegularPolygon, render_funky_regular_polygon, render_regular_polygon, getHeight, getWidth, RGB, calc_regular_polygon_bounds} from './gui.js'
 import {random, srand, max_32_bit_signed, get_angle, logToServer, logBinaryToServer, readFromServer, sleep} from './utils.js'
 import {non_elastic_no_angular_momentum_bounce_vector, magnitude, dot_product_2d, scalar_product_2d, distance, GameObject, menu_font_size, SpatialHashMap2D, SquareAABBCollidable, Circle, normalize2D } from './game_utils.js'
 
@@ -84,11 +84,14 @@ class Ball extends SquareAABBCollidable implements Circle {
 class Brick extends SquareAABBCollidable {
     hp:number;
     type_id:number;
+    polygon:RegularPolygon;
     constructor(x:number, y:number, width:number, height:number)
     {
         super(x, y, width, height);
         this.type_id = Math.floor(random() * 5) + 1;
         this.hp = Math.floor(this.type_id);
+        const radius = Math.min(this.width, this.height) / 2;
+        this.polygon = new RegularPolygon(radius, this.type_id + 2);
     }
     take_damage(damage:number):void
     {
@@ -96,18 +99,22 @@ class Brick extends SquareAABBCollidable {
     }
     draw(canvas: HTMLCanvasElement, ctx: CanvasRenderingContext2D, x: number = this.x, y: number = this.y, width: number = this.width, height: number = this.height): void {
         
+        ctx.lineWidth = 3;
         ctx.strokeStyle = "#000000";
         ctx.fillStyle = new RGB(125 + 60*this.type_id % 256, 92*this.type_id % 256, 125*this.type_id % 256).htmlRBG();  
         ctx.strokeRect(x, y, width, height);
         ctx.fillRect(x, y, width, height);
-        const radius = Math.min(this.width, this.height) / 2;
-        render_regular_polygon(ctx, radius, this.type_id + 2, this.x + this.width / 2 - radius * 5/8, this.y);
+        ctx.beginPath();
+        this.polygon.render(ctx, x + this.width / 2 - this.polygon.width() / 2, y + this.height / 2 - this.polygon.height() / 2);
         ctx.fillStyle = new RGB(125 + 60*this.type_id % 256, 125 + 92*this.type_id % 256, 125 + 125*this.type_id % 256).htmlRBG();  
         ctx.fill();
         if(this.hp > 0)
         {
-            ctx.fillStyle = "#000000";
-            ctx.fillText(""+this.hp, this.mid_x(), this.mid_y());
+            ctx.fillStyle = "#FFFFFF";
+            ctx.strokeStyle = "#000000";
+            const text_width = ctx.measureText(""+this.hp).width;
+            ctx.strokeText(""+this.hp, this.mid_x() - text_width / 2, this.mid_y());
+            ctx.fillText(""+this.hp, this.mid_x() - text_width / 2, this.mid_y());
         }
     }
     update_state(delta_time: number): void {

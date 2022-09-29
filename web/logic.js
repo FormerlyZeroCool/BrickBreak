@@ -1,5 +1,5 @@
 import { SingleTouchListener, isTouchSupported, KeyboardHandler } from './io.js';
-import { render_regular_polygon, getHeight, getWidth, RGB } from './gui.js';
+import { RegularPolygon, getHeight, getWidth, RGB } from './gui.js';
 import { random, srand, max_32_bit_signed } from './utils.js';
 import { non_elastic_no_angular_momentum_bounce_vector, SpatialHashMap2D, SquareAABBCollidable } from './game_utils.js';
 class Ball extends SquareAABBCollidable {
@@ -73,22 +73,28 @@ class Brick extends SquareAABBCollidable {
         super(x, y, width, height);
         this.type_id = Math.floor(random() * 5) + 1;
         this.hp = Math.floor(this.type_id);
+        const radius = Math.min(this.width, this.height) / 2;
+        this.polygon = new RegularPolygon(radius, this.type_id + 2);
     }
     take_damage(damage) {
         this.hp -= damage;
     }
     draw(canvas, ctx, x = this.x, y = this.y, width = this.width, height = this.height) {
+        ctx.lineWidth = 3;
         ctx.strokeStyle = "#000000";
         ctx.fillStyle = new RGB(125 + 60 * this.type_id % 256, 92 * this.type_id % 256, 125 * this.type_id % 256).htmlRBG();
         ctx.strokeRect(x, y, width, height);
         ctx.fillRect(x, y, width, height);
-        const radius = Math.min(this.width, this.height) / 2;
-        render_regular_polygon(ctx, radius, this.type_id + 2, this.x + this.width / 2 - radius * 5 / 8, this.y);
+        ctx.beginPath();
+        this.polygon.render(ctx, x + this.width / 2 - this.polygon.width() / 2, y + this.height / 2 - this.polygon.height() / 2);
         ctx.fillStyle = new RGB(125 + 60 * this.type_id % 256, 125 + 92 * this.type_id % 256, 125 + 125 * this.type_id % 256).htmlRBG();
         ctx.fill();
         if (this.hp > 0) {
-            ctx.fillStyle = "#000000";
-            ctx.fillText("" + this.hp, this.mid_x(), this.mid_y());
+            ctx.fillStyle = "#FFFFFF";
+            ctx.strokeStyle = "#000000";
+            const text_width = ctx.measureText("" + this.hp).width;
+            ctx.strokeText("" + this.hp, this.mid_x() - text_width / 2, this.mid_y());
+            ctx.fillText("" + this.hp, this.mid_x() - text_width / 2, this.mid_y());
         }
     }
     update_state(delta_time) {

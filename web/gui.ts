@@ -1,4 +1,5 @@
 import {SingleTouchListener, isTouchSupported, KeyboardHandler, fetchImage} from './io.js'
+import { max_32_bit_signed } from './utils.js';
 
 export function blendAlphaCopy(color0:RGB, color:RGB):void
 {
@@ -2653,6 +2654,80 @@ export function getHeight():number {
         document.documentElement.clientHeight
       );
 }
+export class RegularPolygon {
+    points:number[];
+    bounds:number[];
+    constructor(radius:number, sides:number)
+    {
+        this.points = [];
+        if(sides <= 2)
+            throw "Error polygon must have at least 3 sides";
+        const side_length = 2 * radius * Math.sin(Math.PI/sides);
+        const exterior_angle = (2 * Math.PI / sides);
+        let xi = 0;
+        let yi = 0;
+        this.bounds = [max_32_bit_signed, max_32_bit_signed, -max_32_bit_signed, -max_32_bit_signed];
+        for(let i = 0; i < sides; i++)
+        {
+            const dx = side_length * Math.cos(exterior_angle * i);
+            const dy = side_length * Math.sin(exterior_angle * i);
+            xi = xi + dx;
+            yi = yi + dy;
+            this.points.push(xi);
+            this.points.push(yi);
+            if(xi < this.bounds[0])
+            {
+                this.bounds[0] = xi;
+            }
+            if(xi > this.bounds[2])
+            {
+                this.bounds[2] = xi;
+            }
+            if(yi < this.bounds[1])
+            {
+                this.bounds[1] = yi;
+            }
+            if(yi > this.bounds[3])
+            {
+                this.bounds[3] = yi;
+            }
+        }
+    }
+    width():number
+    {
+        return this.max_x() - this.min_x();
+    }
+    height():number
+    {
+        return this.max_y() - this.min_y();
+    }
+    min_x():number
+    {
+        return this.bounds[0];
+    }
+    max_x():number
+    {
+        return this.bounds[2];
+    }
+    min_y():number
+    {
+        return this.bounds[1];
+    }
+    max_y():number
+    {
+        return this.bounds[3];
+    }
+    render(ctx:CanvasRenderingContext2D, x:number, y:number):void
+    {
+
+        ctx.moveTo(x - this.bounds[0], y);
+        for(let i = 0; i < this.points.length; i += 2)
+        {
+            ctx.lineTo(this.points[i] - this.bounds[0] + x, this.points[i + 1] + y);
+        }
+        ctx.stroke();
+    }
+};
 export function render_regular_polygon(ctx:CanvasRenderingContext2D, radius:number, sides:number, x:number, y:number):void
 {
     if(sides <= 2)
@@ -2664,6 +2739,7 @@ export function render_regular_polygon(ctx:CanvasRenderingContext2D, radius:numb
     let yi = 0;
     let points:number[] = [];
     let lowest_x = 1000000;
+    let bounds:number[] = [max_32_bit_signed, max_32_bit_signed, -1, -1];
     for(let i = 0; i < sides; i++)
     {
         const dx = side_length * Math.cos(exterior_angle * i);
