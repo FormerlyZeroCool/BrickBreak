@@ -2177,6 +2177,14 @@ export class RegularPolygon {
         }
         ctx.stroke();
     }
+    render_funky(ctx, x, y) {
+        ctx.moveTo(x - this.min_x(), y);
+        for (let i = 0; i < this.points.length; i += 2) {
+            ctx.lineTo(this.points[0] - this.min_x(), this.points[1] - this.min_x());
+            ctx.lineTo(this.points[i] - this.min_x(), this.points[i + 1]);
+        }
+        ctx.stroke();
+    }
 }
 ;
 export function render_regular_polygon(ctx, radius, sides, x, y) {
@@ -2230,7 +2238,6 @@ export function render_funky_regular_polygon(ctx, radius, sides, x, y) {
     }
     ctx.moveTo(x - lowest_x, y);
     for (let i = 0; i < points.length; i += 2) {
-        //ctx.lineTo(points[i + 4] - lowest_x, points[i + 1 + 4]);
         ctx.lineTo(points[0] - lowest_x, points[1] - lowest_x);
         ctx.lineTo(points[i] - lowest_x, points[i + 1]);
     }

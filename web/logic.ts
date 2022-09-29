@@ -1,7 +1,7 @@
 import {SingleTouchListener, TouchMoveEvent, MouseDownTracker, isTouchSupported, KeyboardHandler} from './io.js'
-import {RegularPolygon, render_funky_regular_polygon, render_regular_polygon, getHeight, getWidth, RGB, calc_regular_polygon_bounds} from './gui.js'
+import {RegularPolygon, getHeight, getWidth, RGB} from './gui.js'
 import {random, srand, max_32_bit_signed, get_angle, logToServer, logBinaryToServer, readFromServer, sleep} from './utils.js'
-import {non_elastic_no_angular_momentum_bounce_vector, magnitude, dot_product_2d, scalar_product_2d, distance, GameObject, menu_font_size, SpatialHashMap2D, SquareAABBCollidable, Circle, normalize2D } from './game_utils.js'
+import {non_elastic_no_angular_momentum_bounce_vector, magnitude, dot_product_2d, scalar_product_2d, normalize2D, distance, GameObject, menu_font_size, SpatialHashMap2D, SquareAABBCollidable, Circle } from './game_utils.js'
 
 class Ball extends SquareAABBCollidable implements Circle {
     radius:number;
@@ -192,6 +192,7 @@ class Paddle extends Brick {
             }
         }
         this.power_up_cool_down -= delta_time;
+        
     }
     set_power_up(brick:Brick):void
     {
@@ -252,21 +253,19 @@ class Game extends SquareAABBCollidable {
     paddle:Paddle;
     last_dx:number;
     old_paddle_style:boolean;
+    starting_lives:number;
     lives:number;
     score:number;
     constructor(touchListener:SingleTouchListener, starting_lives:number, x:number, y:number, width:number, height:number)
     {
         super(x, y, width, height);
+        this.score = 0;
+        this.starting_lives = starting_lives;
         this.lives = starting_lives;
         this.last_dx = 0;
         this.old_paddle_style = false;
-        this.bricks = [];
-        this.paddle = new Paddle(width / 2 - width * 0.05, height * 0.95, width * 0.1, height * 0.05);
-        this.paddle.type_id = -1;
-        this.balls = [];
-        this.add_ball();
         //this.bricks.push(this.paddle);
-        this.init(width, height);
+        this.restart_game();
         touchListener.registerCallBack("touchmove", () => true, (event:TouchMoveEvent) => {
             this.last_dx = event.deltaX;
             this.paddle.target_x = event.touchPos[0];
@@ -280,11 +279,30 @@ class Game extends SquareAABBCollidable {
             }
             this.balls.forEach(ball => ball.release());
             this.paddle.accel_x = ((event.touchPos[0] - this.paddle.mid_x()) > 0 ? 1 : -1) * calc_x_accel_paddle() * 3;
+            if(this.lives <= 0)
+            {
+                this.restart_game();
+            }
         });
         touchListener.registerCallBack("touchend", () => true, (event:TouchMoveEvent) => {
             this.paddle.vel_x = 0;
             this.paddle.accel_x = 0;
         });
+    }
+    new_paddle():void
+    {
+        this.paddle = new Paddle(this.width / 2 - this.width * 0.05, this.height * 0.95, this.width * 0.1, this.height * 0.05);
+        this.paddle.type_id = -1;
+    }
+    restart_game():void
+    {
+        this.new_paddle();
+        this.bricks = [];
+        this.balls = [];
+        this.add_ball();
+        this.score = 0;
+        this.lives = this.starting_lives;
+        this.init(this.width, this.height);
     }
     add_ball():Ball
     {
@@ -356,13 +374,44 @@ class Game extends SquareAABBCollidable {
         }
         this.paddle.draw(canvas, ctx);
         ctx.beginPath();
+        const font_size = menu_font_size();
+        ctx.font = `${font_size}px Helvetica`;
+        ctx.fillStyle = "#000000";
+        ctx.strokeStyle = "#FFFFFF";
+        ctx.strokeText("Score: " + Math.floor(this.score), 0, font_size);
+        ctx.fillText("Score: " + Math.floor(this.score), 0, font_size);
+        ctx.strokeText("Lives: " + Math.floor(this.lives), 0, font_size * 2);
+        ctx.fillText("Lives: " + Math.floor(this.lives), 0, font_size * 2);
+        if(this.lives <= 0)
+        {
+            let i = 0;
+            let text = `Game Over, no lives remaining.`;
+            let text_width = ctx.measureText(text).width;
+            ctx.strokeText(text, width / 2 - text_width / 2, height / 2 + i * font_size);
+            ctx.fillText(text, width / 2 - text_width / 2, height / 2 + i * font_size);
+            i++;
+            text = `Final score: ${Math.floor(this.score)}`;
+            text_width = ctx.measureText(text).width;
+            ctx.strokeText(text, width / 2 - text_width / 2, height / 2 + i * font_size);
+            ctx.fillText(text, width / 2 - text_width / 2, height / 2 + i * font_size);
+            i++;
+            text = `Click, Tap, or press Space to restart.`;
+            text_width = ctx.measureText(text).width;
+            ctx.strokeText(text, width / 2 - text_width / 2, height / 2 + i * font_size);
+            ctx.fillText(text, width / 2 - text_width / 2, height / 2 + i * font_size);
+            i++;
+
+        }
     }
     update_state(delta_time: number): void {
+        if(this.lives <= 0)
+        {
+            return;
+        }
         if(this.bricks.length === 1)
         {
             this.init(this.width, this.height);
         }
-
         for(let i = 0; i < this.balls.length; i++)
         {
             const ball = this.balls[i];
@@ -379,6 +428,27 @@ class Game extends SquareAABBCollidable {
                 if(ball_index !== -1)
                     this.balls.splice(ball_index, 1);
             }
+        }
+        const score_mod = delta_time / 10;
+        if(this.paddle.power_up_count_down > 0)
+        {
+            switch(this.paddle.power_up_type.type_id)
+            {
+                case(1):
+                this.score += score_mod * 2;
+                break;
+                case(2):
+                case(3):
+                case(4):
+                this.score += score_mod;
+                break;
+                case(5):
+                break;
+            }
+        }
+        else
+        {
+            this.score += score_mod / 2;
         }
         this.paddle.update_state_paddle(delta_time, this);
         this.collision_map = new SpatialHashMap2D(this.balls.concat([this.paddle]), this.bricks, this.width, this.height, 20, 20);
@@ -496,6 +566,7 @@ class Game extends SquareAABBCollidable {
         if(this.balls.length === 0)
         {
             //this.bricks = [];
+            this.lives -= 1;
             this.add_ball();
             //this.init(this.height, this.width);
         }
@@ -543,7 +614,11 @@ async function main()
                 {
                     case("Space"):
                         game.balls.forEach(ball => ball.release());
-                        game.paddle.use_power_up(game);
+                        game.paddle.use_power_up(game);            
+                        if(game.lives <= 0)
+                        {
+                            game.restart_game();
+                        }
                     break;
                    
                     case("ArrowUp"):
