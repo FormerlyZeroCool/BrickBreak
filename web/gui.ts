@@ -2647,10 +2647,10 @@ export function getWidth():number {
 }
 export function getHeight():number {
       return Math.min(
-        document.body.scrollHeight,
-        document.documentElement.scrollHeight,
-        document.body.offsetHeight,
-        document.documentElement.offsetHeight,
+        //document.body.scrollHeight,
+        //document.documentElement.scrollHeight,
+        //document.body.offsetHeight,
+        //document.documentElement.offsetHeight//,
         document.documentElement.clientHeight
       );
 }

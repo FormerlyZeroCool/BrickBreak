@@ -2119,7 +2119,12 @@ export function getWidth() {
     return Math.min(document.body.scrollWidth, document.documentElement.scrollWidth, document.body.offsetWidth, document.documentElement.offsetWidth, document.documentElement.clientWidth);
 }
 export function getHeight() {
-    return Math.min(document.body.scrollHeight, document.documentElement.scrollHeight, document.body.offsetHeight, document.documentElement.offsetHeight, document.documentElement.clientHeight);
+    return Math.min(
+    //document.body.scrollHeight,
+    //document.documentElement.scrollHeight,
+    //document.body.offsetHeight,
+    //document.documentElement.offsetHeight//,
+    document.documentElement.clientHeight);
 }
 export class RegularPolygon {
     constructor(radius, sides) {
