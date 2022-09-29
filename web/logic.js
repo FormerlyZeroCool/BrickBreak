@@ -1,5 +1,5 @@
 import { SingleTouchListener, isTouchSupported, KeyboardHandler } from './io.js';
-import { getHeight, getWidth, RGB } from './gui.js';
+import { render_regular_polygon, getHeight, getWidth, RGB } from './gui.js';
 import { random, srand, max_32_bit_signed } from './utils.js';
 import { non_elastic_no_angular_momentum_bounce_vector, SpatialHashMap2D, SquareAABBCollidable } from './game_utils.js';
 class Ball extends SquareAABBCollidable {
@@ -82,6 +82,10 @@ class Brick extends SquareAABBCollidable {
         ctx.fillStyle = new RGB(125 + 60 * this.type_id % 256, 92 * this.type_id % 256, 125 * this.type_id % 256).htmlRBG();
         ctx.strokeRect(x, y, width, height);
         ctx.fillRect(x, y, width, height);
+        const radius = Math.min(this.width, this.height) / 2;
+        render_regular_polygon(ctx, radius, this.type_id + 2, this.x + this.width / 2 - radius * 5 / 8, this.y);
+        ctx.fillStyle = new RGB(125 + 60 * this.type_id % 256, 125 + 92 * this.type_id % 256, 125 + 125 * this.type_id % 256).htmlRBG();
+        ctx.fill();
         if (this.hp > 0) {
             ctx.fillStyle = "#000000";
             ctx.fillText("" + this.hp, this.mid_x(), this.mid_y());
@@ -190,8 +194,9 @@ class Paddle extends Brick {
     }
 }
 class Game extends SquareAABBCollidable {
-    constructor(touchListener, x, y, width, height) {
+    constructor(touchListener, starting_lives, x, y, width, height) {
         super(x, y, width, height);
+        this.lives = starting_lives;
         this.last_dx = 0;
         this.old_paddle_style = false;
         this.bricks = [];
@@ -208,6 +213,9 @@ class Game extends SquareAABBCollidable {
             this.paddle.accel_x = (event.touchPos[0] - this.paddle.mid_x() > 0 ? 1 : -1) * calc_x_accel_paddle() * 3;
         });
         touchListener.registerCallBack("touchstart", () => true, (event) => {
+            if (Date.now() - touchListener.lastTouchTime < 50) {
+                this.paddle.use_power_up(this);
+            }
             this.balls.forEach(ball => ball.release());
             this.paddle.accel_x = ((event.touchPos[0] - this.paddle.mid_x()) > 0 ? 1 : -1) * calc_x_accel_paddle() * 3;
         });
@@ -275,6 +283,7 @@ class Game extends SquareAABBCollidable {
             ball.draw(canvas, ctx);
         }
         this.paddle.draw(canvas, ctx);
+        ctx.beginPath();
     }
     update_state(delta_time) {
         if (this.bricks.length === 1) {
@@ -418,7 +427,7 @@ async function main() {
     const touchScreen = isTouchSupported();
     let height = getHeight();
     let width = getWidth();
-    let game = new Game(touchListener, 0, 0, height, width);
+    let game = new Game(touchListener, 3, 0, 0, height, width);
     window.game = game;
     //setInterval(() => {for(let i = 0; i < 200; i++) game.add_ball(); game.balls.forEach(ball => ball.release());}, 50)
     keyboardHandler.registerCallBack("keydown", () => true, (event) => {

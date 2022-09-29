@@ -100,6 +100,10 @@ class Brick extends SquareAABBCollidable {
         ctx.fillStyle = new RGB(125 + 60*this.type_id % 256, 92*this.type_id % 256, 125*this.type_id % 256).htmlRBG();  
         ctx.strokeRect(x, y, width, height);
         ctx.fillRect(x, y, width, height);
+        const radius = Math.min(this.width, this.height) / 2;
+        render_regular_polygon(ctx, radius, this.type_id + 2, this.x + this.width / 2 - radius * 5/8, this.y);
+        ctx.fillStyle = new RGB(125 + 60*this.type_id % 256, 125 + 92*this.type_id % 256, 125 + 125*this.type_id % 256).htmlRBG();  
+        ctx.fill();
         if(this.hp > 0)
         {
             ctx.fillStyle = "#000000";
@@ -241,9 +245,12 @@ class Game extends SquareAABBCollidable {
     paddle:Paddle;
     last_dx:number;
     old_paddle_style:boolean;
-    constructor(touchListener:SingleTouchListener, x:number, y:number, width:number, height:number)
+    lives:number;
+    score:number;
+    constructor(touchListener:SingleTouchListener, starting_lives:number, x:number, y:number, width:number, height:number)
     {
         super(x, y, width, height);
+        this.lives = starting_lives;
         this.last_dx = 0;
         this.old_paddle_style = false;
         this.bricks = [];
@@ -260,6 +267,10 @@ class Game extends SquareAABBCollidable {
             this.paddle.accel_x = (event.touchPos[0] - this.paddle.mid_x() > 0 ? 1 : -1) * calc_x_accel_paddle() * 3;
         });
         touchListener.registerCallBack("touchstart", () => true, (event:TouchMoveEvent) => {
+            if(Date.now() - touchListener.lastTouchTime < 50)
+            {
+                this.paddle.use_power_up(this);
+            }
             this.balls.forEach(ball => ball.release());
             this.paddle.accel_x = ((event.touchPos[0] - this.paddle.mid_x()) > 0 ? 1 : -1) * calc_x_accel_paddle() * 3;
         });
@@ -337,6 +348,7 @@ class Game extends SquareAABBCollidable {
             ball.draw(canvas, ctx);
         }
         this.paddle.draw(canvas, ctx);
+        ctx.beginPath();
     }
     update_state(delta_time: number): void {
         if(this.bricks.length === 1)
@@ -515,7 +527,7 @@ async function main()
     const touchScreen:boolean = isTouchSupported();
     let height = getHeight();
     let width = getWidth();
-    let game = new Game(touchListener, 0, 0, height, width);
+    let game = new Game(touchListener, 3, 0, 0, height, width);
     window.game = game;
     //setInterval(() => {for(let i = 0; i < 200; i++) game.add_ball(); game.balls.forEach(ball => ball.release());}, 50)
     keyboardHandler.registerCallBack("keydown", () => true, (event:any) => {

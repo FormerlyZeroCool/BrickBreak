@@ -11,7 +11,6 @@ export function distance(a:SquareAABBCollidable, b:SquareAABBCollidable):number
 }
 export function non_elastic_no_angular_momentum_bounce_vector(direction_vector:number[], normal_vector:number[]):number[]
 {
-
     const mag = magnitude(direction_vector[0], direction_vector[1]);
     const collision_vector = normalize2D(normal_vector);
     const ndirection = normalize2D(direction_vector);
@@ -19,6 +18,11 @@ export function non_elastic_no_angular_momentum_bounce_vector(direction_vector:n
     const w = [ndirection[0] - u[0], ndirection[1] - u[1]];
 
     return [(w[0] - u[0]) * mag, (w[1] - u[1]) * mag];
+}
+export function normalize2D(vector:number[]):number[]
+{
+    const mag = magnitude(vector[0], vector[1]);
+    return [vector[0] / mag, vector[1] / mag];
 }
 export function magnitude(a:number, b:number):number
 {
@@ -31,11 +35,6 @@ export function scalar_product_2d(a:number, b:number[]):number[]
 export function dot_product_2d(a:number[], b:number[]):number
 {
     return a[0]*b[0] + a[1]*b[1];
-}
-export function normalize2D(vector:number[]):number[]
-{
-    const mag = magnitude(vector[0], vector[1]);
-    return [vector[0] / mag, vector[1] / mag];
 }
 export function manhattan_distance(a:SquareAABBCollidable, b:SquareAABBCollidable):number
 {
