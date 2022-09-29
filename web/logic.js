@@ -337,6 +337,7 @@ class Game extends SquareAABBCollidable {
         if (this.bricks.length === 1) {
             this.init(this.width, this.height);
         }
+        this.paddle.update_state_paddle(delta_time, this);
         for (let i = 0; i < this.balls.length; i++) {
             const ball = this.balls[i];
             ball.update_state(delta_time);
@@ -351,6 +352,7 @@ class Game extends SquareAABBCollidable {
                     this.balls.splice(ball_index, 1);
             }
         }
+        //handle keeping score
         const score_mod = delta_time / 10;
         if (this.paddle.power_up_count_down > 0) {
             switch (this.paddle.power_up_type.type_id) {
@@ -369,7 +371,6 @@ class Game extends SquareAABBCollidable {
         else {
             this.score += score_mod / 2;
         }
-        this.paddle.update_state_paddle(delta_time, this);
         this.collision_map = new SpatialHashMap2D(this.balls.concat([this.paddle]), this.bricks, this.width, this.height, 20, 20);
         this.collision_map.handle_by_cell((ball, brick) => {
             if (ball.radius && brick.collides_with_circle(ball)) {
@@ -542,6 +543,7 @@ async function main() {
             canvas.width = game.width;
             canvas.height = game.height - (isTouchSupported() ? 125 : 25);
             game.resize(canvas.width, canvas.height);
+            game.paddle.update_state_paddle(0, game);
         }
         dt = Date.now() - start;
         start = Date.now();
