@@ -102,6 +102,7 @@ const keyboardHandler = new KeyboardHandler();
 class Paddle extends Brick {
     constructor(x, y, width, height) {
         super(x, y, width, height);
+        this.unscaled_width = width * 2;
         this.power_up_cool_down = 0;
         this.accel_x = 0;
         this.target_vel_x = calc_x_vel_paddle();
@@ -132,6 +133,12 @@ class Paddle extends Brick {
         }
         if (this.power_up_count_down > 0) {
             this.power_up_count_down -= delta_time;
+            if (this.power_up_type.type_id === 3 && Math.abs(this.width - 2 * this.unscaled_width) > 0.1) {
+                this.width = this.unscaled_width * 2;
+            }
+            else if (this.power_up_type.type_id === 4 && Math.abs(this.width - 2.5 * this.unscaled_width) > 0.1) {
+                this.width = this.unscaled_width * 2.5;
+            }
         }
         this.power_up_cool_down -= delta_time;
     }
@@ -142,26 +149,35 @@ class Paddle extends Brick {
     use_power_up(game) {
         if (this.power_up_count_down > 0 && this.power_up_cool_down <= 0) {
             switch (this.power_up_type.type_id) {
-                case (1):
+                case (2):
                     this.power_up_cool_down = 500;
                     game.add_ball();
                     game.balls[game.balls.length - 1].release();
                     break;
-                case (2):
-                    const added = game.add_ball();
-                    this.power_up_cool_down = 250;
-                    added.release();
-                    added.radius = 5;
-                    added.width = 10;
-                    added.height = 10;
-                    added.direction[0] = 0;
-                    added.direction[1] = -1 * getHeight() / 3;
-                    break;
-                case (3):
-                    break;
                 case (4):
+                    {
+                        const added = game.add_ball();
+                        this.power_up_cool_down = 250;
+                        added.release();
+                        added.radius = 5;
+                        added.width = 10;
+                        added.height = 10;
+                        added.direction[0] = 0;
+                        added.direction[1] = -1 * getHeight() / 3;
+                    }
                     break;
                 case (5):
+                    {
+                        const added = game.add_ball();
+                        this.power_up_cool_down = this.power_up_count_down;
+                        added.release();
+                        added.radius = Math.floor(game.width * 0.1);
+                        added.width = Math.floor(game.width * 0.2);
+                        added.y -= added.width;
+                        added.height = Math.floor(game.width * 0.2);
+                        added.direction[0] = 0;
+                        added.direction[1] = -1 * getHeight() / 3;
+                    }
                     break;
             }
         }
@@ -233,14 +249,17 @@ class Game extends SquareAABBCollidable {
         this.paddle.x = px * width;
         this.paddle.y = py * height;
         this.paddle.width = brick_width * (height > width ? 4 : 3);
+        this.paddle.unscaled_width = this.paddle.width;
         this.balls.forEach(ball => {
             const px = ball.x / this.width;
             const py = ball.y / this.height;
             ball.x = px * width;
             ball.y = py * height;
-            ball.radius = height * 0.025;
-            ball.width = ball.radius * 2;
-            ball.height = ball.radius * 2;
+            if (Math.abs(ball.radius - this.height * 0.025) < 0.1) {
+                ball.radius = height * 0.025;
+                ball.width = ball.radius * 2;
+                ball.height = ball.radius * 2;
+            }
         });
         this.width = width;
         this.height = height;
