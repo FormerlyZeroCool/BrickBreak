@@ -206,7 +206,7 @@ class Brick extends SquareAABBCollidable {
             ctx.fillStyle = "#FFFFFF";
             ctx.strokeStyle = "#000000";
             const text_width = ctx.measureText("" + this.hp).width;
-            ctx.font = `${Math.min(canvas.height, canvas.width) > 700 ? 12 : 9}px Comic Sans`;
+            ctx.font = `${Math.min(canvas.height, canvas.width) > 700 ? 14 : 9}px Comic Sans`;
             ctx.strokeText("" + this.hp, this.mid_x() - text_width / 2, this.mid_y());
             ctx.fillText("" + this.hp, this.mid_x() - text_width / 2, this.mid_y());
         }
@@ -480,7 +480,7 @@ class Game extends SquareAABBCollidable {
                          {
                             if (ball.mid_y() > brick.mid_y()) //top left
                              {
-                                delta = [-brick.x + ball.mid_x(), -brick.y + ball.mid_y()];
+                                delta = [brick.x - ball.mid_x(), brick.y - ball.mid_y()];
                             }
                             else //bottom left
                              {
@@ -491,6 +491,8 @@ class Game extends SquareAABBCollidable {
                             if (ball.mid_y() > brick.mid_y()) //top right
                              {
                                 delta = [brick.x + brick.width - ball.mid_x(), brick.y - ball.mid_y()];
+                                //delta[0] *= -1;
+                                //delta[1] *= -1;
                             }
                             else //bottom right
                              {
