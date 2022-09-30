@@ -1,7 +1,7 @@
 import { SingleTouchListener, isTouchSupported, KeyboardHandler } from './io.js';
 import { RegularPolygon, getHeight, getWidth, RGB } from './gui.js';
 import { random, srand, max_32_bit_signed, FixedSizeQueue } from './utils.js';
-import { non_elastic_no_angular_momentum_bounce_vector, menu_font_size, SpatialHashMap2D, SquareAABBCollidable } from './game_utils.js';
+import { non_elastic_no_angular_momentum_bounce_vector, magnitude, menu_font_size, SpatialHashMap2D, SquareAABBCollidable } from './game_utils.js';
 class PowerUp {
     constructor(type_id, init_count_down, init_cool_down) {
         this.type_id = type_id;
@@ -172,7 +172,7 @@ class Ball extends SquareAABBCollidable {
     }
     hit(brick) {
         brick.take_damage(this.attack_power);
-        this.direction[1] *= 1.01;
+        this.direction[1] *= 1.05;
     }
 }
 ;
@@ -450,8 +450,8 @@ class Game extends SquareAABBCollidable {
                             b.direction[1] *= -1;
                             b.direction[0] += this.paddle.vel_x;
                         }
-                        if (b.direction[1] > -120)
-                            b.direction[1] += -80;
+                        if (b.direction[1] > -200)
+                            b.direction[1] += -200;
                     }
                 }
             }
@@ -476,17 +476,20 @@ class Game extends SquareAABBCollidable {
                 if (collision_code > 0) {
                     ball.hit(brick);
                     if (collision_code === 1) {
+                        const point_collision = [-1, -1];
                         if (ball.mid_x() < brick.mid_x()) //left side
                          {
                             if (ball.mid_y() > brick.mid_y()) //top left
                              {
                                 delta = [brick.x - ball.mid_x(), brick.y - ball.mid_y()];
-                                delta[0] *= -1;
-                                delta[1] *= -1;
+                                point_collision[0] = brick.x;
+                                point_collision[1] = brick.y;
                             }
                             else //bottom left
                              {
-                                delta = [brick.x - ball.mid_x(), -brick.y - brick.height + ball.mid_y()];
+                                delta = [brick.x - ball.mid_x(), brick.y + brick.height - ball.mid_y()];
+                                point_collision[0] = brick.x;
+                                point_collision[1] = brick.y + brick.height;
                             }
                         }
                         else {
@@ -495,15 +498,23 @@ class Game extends SquareAABBCollidable {
                                 delta = [brick.x + brick.width - ball.mid_x(), brick.y - ball.mid_y()];
                                 //delta[0] *= -1;
                                 //delta[1] *= -1;
+                                point_collision[0] = brick.x + brick.width;
+                                point_collision[1] = brick.y;
                             }
                             else //bottom right
                              {
                                 delta = [brick.x + brick.width - ball.mid_x(), brick.y + brick.height - ball.mid_y()];
+                                point_collision[0] = brick.x + brick.width;
+                                point_collision[1] = brick.y + brick.height;
                             }
                         }
                         //invert vector to be normal vector for corner
-                        delta[0] *= -1;
-                        delta[1] *= -1;
+                        const dist_plus = magnitude((delta[0] + point_collision[0] - brick.mid_x()), (delta[1] + point_collision[1] - brick.mid_y()));
+                        const dist_minus = magnitude((-delta[0] + point_collision[0] - brick.mid_x()), (-delta[1] + point_collision[1] - brick.mid_y()));
+                        if (dist_minus > dist_plus) {
+                            delta[0] *= -1;
+                            delta[1] *= -1;
+                        }
                     }
                     else {
                         if (ball.mid_y() < brick.y) {
