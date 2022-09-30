@@ -184,6 +184,11 @@ class Brick extends SquareAABBCollidable {
         const radius = Math.min(this.width, this.height) / 2;
         this.polygon = new RegularPolygon(radius, this.type_id + 2);
     }
+    resize(width, height) {
+        this.width = width;
+        this.height = height;
+        this.polygon.resize_radius(Math.min(width, height) / 2);
+    }
     take_damage(damage) {
         this.hp -= damage;
     }
@@ -201,6 +206,7 @@ class Brick extends SquareAABBCollidable {
             ctx.fillStyle = "#FFFFFF";
             ctx.strokeStyle = "#000000";
             const text_width = ctx.measureText("" + this.hp).width;
+            ctx.font = `${Math.min(canvas.height, canvas.width) > 700 ? 12 : 9}px Comic Sans`;
             ctx.strokeText("" + this.hp, this.mid_x() - text_width / 2, this.mid_y());
             ctx.fillText("" + this.hp, this.mid_x() - text_width / 2, this.mid_y());
         }
@@ -336,8 +342,7 @@ class Game extends SquareAABBCollidable {
             const py = brick.y / this.height;
             brick.x = px * width;
             brick.y = py * height;
-            brick.width = brick_width;
-            brick.height = brick_height;
+            brick.resize(brick_width, brick_height);
         }
         const px = this.paddle.x / this.width;
         const py = this.paddle.y / this.height;

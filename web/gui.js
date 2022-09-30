@@ -2129,14 +2129,19 @@ export function getHeight() {
 export class RegularPolygon {
     constructor(radius, sides) {
         this.points = [];
+        this.sides = sides;
         if (sides <= 2)
             throw "Error polygon must have at least 3 sides";
-        const side_length = 2 * radius * Math.sin(Math.PI / sides);
-        const exterior_angle = (2 * Math.PI / sides);
+        this.resize_radius(radius);
+    }
+    resize_radius(radius) {
+        this.points = [];
+        const side_length = 2 * radius * Math.sin(Math.PI / this.sides);
+        const exterior_angle = (2 * Math.PI / this.sides);
         let xi = 0;
         let yi = 0;
         this.bounds = [max_32_bit_signed, max_32_bit_signed, -max_32_bit_signed, -max_32_bit_signed];
-        for (let i = 0; i < sides; i++) {
+        for (let i = 0; i < this.sides; i++) {
             const dx = side_length * Math.cos(exterior_angle * i);
             const dy = side_length * Math.sin(exterior_angle * i);
             xi = xi + dx;
