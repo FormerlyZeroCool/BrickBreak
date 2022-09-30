@@ -475,7 +475,7 @@ class Game extends SquareAABBCollidable {
                          {
                             if (ball.mid_y() > brick.mid_y()) //top left
                              {
-                                delta = [brick.x - ball.mid_x(), brick.y - ball.mid_y()];
+                                delta = [-brick.x + ball.mid_x(), -brick.y + ball.mid_y()];
                             }
                             else //bottom left
                              {

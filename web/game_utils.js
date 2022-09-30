@@ -1,5 +1,6 @@
+import { getHeight, getWidth } from './gui.js';
 import { isTouchSupported } from './io.js';
-export function menu_font_size() { return isTouchSupported() ? 27 : 22; }
+export function menu_font_size() { return (isTouchSupported() ? 27 : 22) * (Math.min(getWidth(), getHeight()) < 600 ? 0.75 : 1); }
 export function distance(a, b) {
     const dx = a.mid_x() - b.mid_x();
     const dy = a.mid_y() - b.mid_y();

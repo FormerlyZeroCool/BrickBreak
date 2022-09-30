@@ -1,8 +1,8 @@
 
-import { GuiElement } from './gui.js'
+import { getHeight, getWidth, GuiElement } from './gui.js'
 import {isTouchSupported} from './io.js'
 
-export function menu_font_size():number { return isTouchSupported() ? 27:22; }
+export function menu_font_size():number { return (isTouchSupported() ? 27:22) * (Math.min(getWidth(), getHeight()) < 600 ? 0.75 : 1); }
 export function distance(a:SquareAABBCollidable, b:SquareAABBCollidable):number
 {
     const dx = a.mid_x() - b.mid_x();
