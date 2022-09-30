@@ -1,7 +1,7 @@
 import {SingleTouchListener, TouchMoveEvent, MouseDownTracker, isTouchSupported, KeyboardHandler} from './io.js'
 import {RegularPolygon, getHeight, getWidth, RGB} from './gui.js'
 import {random, srand, max_32_bit_signed, FixedSizeQueue} from './utils.js'
-import {non_elastic_no_angular_momentum_bounce_vector, magnitude, dot_product_2d, scalar_product_2d, normalize2D, distance, GameObject, menu_font_size, SpatialHashMap2D, SquareAABBCollidable, Circle } from './game_utils.js'
+import {non_elastic_no_angular_momentum_bounce_vector, get_normal_vector_aabb_rect_circle_collision, magnitude, dot_product_2d, scalar_product_2d, normalize2D, distance, GameObject, menu_font_size, SpatiallyMappableCircle, SpatialHashMap2D, SquareAABBCollidable, Circle } from './game_utils.js'
 class PowerUp {
     type_id:number;
     init_count_down:number;
@@ -134,7 +134,7 @@ class PowerUpSuperBall extends PowerUp {
 const power_ups:PowerUp[] = []
 power_ups.push(new PowerUp(0, 0, 0), new PowerUpExtraPoints(), new PowerUpRandomBall(), new PowerUpDoubleWide(), 
         new PowerUpDoubleAndAHalfWide(), new PowerUpSuperBall());
-class Ball extends SquareAABBCollidable implements Circle {
+class Ball extends SpatiallyMappableCircle {
     radius:number;
     direction:number[];
     attack_power:number;
@@ -322,8 +322,16 @@ class Paddle extends Brick {
     }
     set_power_up(brick:Brick):void
     {
-        this.power_up_type = power_ups[brick.type_id]!;
-        this.power_up_type.power_up_count_down = this.power_up_type.init_count_down;
+        const new_power_up =  power_ups[brick.type_id]!;
+        if(this.power_up_type.type_id == 0 || new_power_up.type_id > 1 && this.power_up_type.power_up_count_down <= 0)
+        {
+            this.power_up_type = new_power_up;
+            this.power_up_type.power_up_count_down = this.power_up_type.init_count_down;
+        }
+        else if(new_power_up.type_id === 1)
+        {
+            this.power_up_type.power_up_count_down = this.power_up_type.init_count_down;
+        }
     }
     use_power_up(game:Game):void
     {
@@ -509,7 +517,7 @@ class Game extends SquareAABBCollidable {
         {
             return;
         }
-        if(this.bricks.length === 1)
+        if(this.bricks.length === 0)
         {
             this.init(this.width, this.height);
         }
@@ -585,78 +593,11 @@ class Game extends SquareAABBCollidable {
                     //collision code 0 no collision
                     //1 corner collision
                     //2 edge collision
-                    let delta:number[];
-                    if(collision_code > 0)
+                    const normal:number[] = get_normal_vector_aabb_rect_circle_collision(ball, brick);
+                    if(normal[0] !== 0 || normal[1] !== 0)
                     {
                         ball.hit(brick);
-                        if(collision_code === 1)
-                        {
-                            const point_collision:number[] = [-1, -1];
-                            if(ball.mid_x() < brick.mid_x())//left side
-                            {
-                                if(ball.mid_y() > brick.mid_y())//top left
-                                {
-                                    delta = [brick.x - ball.mid_x(), brick.y - ball.mid_y()];
-                                    point_collision[0] = brick.x;
-                                    point_collision[1] = brick.y;
-                                }  
-                                else//bottom left
-                                {
-                                    delta = [brick.x - ball.mid_x(), brick.y + brick.height - ball.mid_y()];
-                                    point_collision[0] = brick.x;
-                                    point_collision[1] = brick.y + brick.height;
-                                }
-                                
-                            }
-                            else
-                            {
-                                if(ball.mid_y() > brick.mid_y())//top right
-                                {
-                                    delta = [brick.x + brick.width - ball.mid_x(), brick.y - ball.mid_y()];
-                                    //delta[0] *= -1;
-                                    //delta[1] *= -1;
-                                    point_collision[0] = brick.x + brick.width;
-                                    point_collision[1] = brick.y;
-    
-                                }  
-                                else//bottom right
-                                {
-                                    delta = [brick.x + brick.width - ball.mid_x(), brick.y + brick.height - ball.mid_y()];
-                                    point_collision[0] = brick.x + brick.width;
-                                    point_collision[1] = brick.y + brick.height;
-                                }
-                            }
-                            //invert vector to be normal vector for corner
-                            const dist_plus:number = magnitude((delta[0] + point_collision[0] - brick.mid_x()),
-                            (delta[1] + point_collision[1] - brick.mid_y()));
-                            const dist_minus:number = magnitude((-delta[0] + point_collision[0] - brick.mid_x()),
-                                (-delta[1] + point_collision[1] - brick.mid_y()));
-                            if(dist_minus > dist_plus)
-                            {
-                                delta[0] *= -1;
-                                delta[1] *= -1;
-                            }
-                        }
-                        else 
-                        {
-                            if(ball.mid_y() < brick.y)
-                            {
-                                delta = [0, -ball.radius];
-                            }
-                            else if(ball.mid_y() > brick.y + brick.height)
-                            {
-                                delta = [0, ball.radius];
-                            }
-                            else if(ball.mid_x() < brick.x)
-                            {
-                                delta = [-ball.radius, 0];
-                            }
-                            else
-                            {
-                                delta = [ball.radius, 0];
-                            }
-                        }
-                        ball.direction = non_elastic_no_angular_momentum_bounce_vector(ball.direction, delta);
+                        ball.direction = non_elastic_no_angular_momentum_bounce_vector(ball.direction, normal);
                         ball.update_state(delta_time);
                     }
                     
@@ -706,6 +647,7 @@ async function main()
     let width = getWidth();
     let game = new Game(touchListener, 3, 0, 0, height, width);
     window.game = game;
+    let low_fps:boolean = false;
     //setInterval(() => {for(let i = 0; i < 200; i++) game.add_ball(); game.balls.forEach(ball => ball.release());}, 50)
     keyboardHandler.registerCallBack("keydown", () => true, (event:any) => {
 
@@ -720,6 +662,9 @@ async function main()
                         }
                     break;
                    
+                    case("KeyL"):
+                    low_fps = !low_fps;
+                    break;
                     case("ArrowUp"):
                     break;
                     case("ArrowDown"):
@@ -773,16 +718,23 @@ async function main()
         time_queue.push(dt);
         start = Date.now();
         let sum = 0;
+        let highest = 0;
         for(let i = 0; i < time_queue.length; i++)
         {
-            sum += time_queue.get(i);
+            const value = time_queue.get(i);
+            sum += value;
+            if(highest < value)
+            {
+                highest = value;
+            }
         }
         game.update_state(dt);
         ctx.clearRect(0, 0, canvas.width, canvas.height);
         game.draw(canvas, ctx, game.x, game.y, game.width, game.height);
         if(frame_count % 10 === 0)
-            instantaneous_fps = Math.floor(1000 / (dt));
-        const text = `avg fps: ${Math.floor(1000 * time_queue.length / sum)}, ins fps: ${instantaneous_fps}`;
+            instantaneous_fps = Math.floor(1000 / (low_fps?highest:dt));
+        let text = "";
+        text = `avg fps: ${Math.floor(1000 * time_queue.length / sum)}, ${low_fps?"low":"ins"} fps: ${instantaneous_fps}`;
         const text_width = ctx.measureText(text).width;
         ctx.strokeText(text, game.width - text_width - 10, menu_font_size());
         ctx.fillText(text, game.width - text_width - 10, menu_font_size());

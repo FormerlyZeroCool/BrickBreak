@@ -6,6 +6,66 @@ export function distance(a, b) {
     const dy = a.mid_y() - b.mid_y();
     return Math.sqrt(dx * dx + dy * dy);
 }
+export function get_normal_vector_aabb_rect_circle_collision(ball, brick) {
+    let delta = [0, 0];
+    const collision_code = brick.collides_with_circle(ball);
+    if (collision_code === 1) {
+        const point_collision = [-1, -1];
+        if (ball.mid_x() < brick.mid_x()) //left side
+         {
+            if (ball.mid_y() > brick.mid_y()) //top left
+             {
+                delta = [brick.x - ball.mid_x(), brick.y - ball.mid_y()];
+                point_collision[0] = brick.x;
+                point_collision[1] = brick.y;
+            }
+            else //bottom left
+             {
+                delta = [brick.x - ball.mid_x(), brick.y + brick.height - ball.mid_y()];
+                point_collision[0] = brick.x;
+                point_collision[1] = brick.y + brick.height;
+            }
+        }
+        else {
+            if (ball.mid_y() > brick.mid_y()) //top right
+             {
+                delta = [brick.x + brick.width - ball.mid_x(), brick.y - ball.mid_y()];
+                //delta[0] *= -1;
+                //delta[1] *= -1;
+                point_collision[0] = brick.x + brick.width;
+                point_collision[1] = brick.y;
+            }
+            else //bottom right
+             {
+                delta = [brick.x + brick.width - ball.mid_x(), brick.y + brick.height - ball.mid_y()];
+                point_collision[0] = brick.x + brick.width;
+                point_collision[1] = brick.y + brick.height;
+            }
+        }
+        //invert vector to be normal vector for corner
+        const dist_plus = magnitude((delta[0] + point_collision[0] - brick.mid_x()), (delta[1] + point_collision[1] - brick.mid_y()));
+        const dist_minus = magnitude((-delta[0] + point_collision[0] - brick.mid_x()), (-delta[1] + point_collision[1] - brick.mid_y()));
+        if (dist_minus > dist_plus) {
+            delta[0] *= -1;
+            delta[1] *= -1;
+        }
+    }
+    else {
+        if (ball.mid_y() < brick.y) {
+            delta = [0, -ball.radius];
+        }
+        else if (ball.mid_y() > brick.y + brick.height) {
+            delta = [0, ball.radius];
+        }
+        else if (ball.mid_x() < brick.x) {
+            delta = [-ball.radius, 0];
+        }
+        else {
+            delta = [ball.radius, 0];
+        }
+    }
+    return delta;
+}
 export function non_elastic_no_angular_momentum_bounce_vector(direction_vector, normal_vector) {
     const mag = magnitude(direction_vector[0], direction_vector[1]);
     const collision_vector = normalize2D(normal_vector);
@@ -93,6 +153,9 @@ export class SquareAABBCollidable {
     mid_y() {
         return this.y + this.height / 2;
     }
+}
+;
+export class SpatiallyMappableCircle extends SquareAABBCollidable {
 }
 ;
 export class Cell {
