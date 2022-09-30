@@ -240,8 +240,9 @@ class Paddle extends Brick {
         this.vel_x += Math.abs(this.vel_x) < this.target_vel_x ?
             this.accel_x * delta_time / 1000 :
             0;
+        update_state_super(this.power_up_type, delta_time, this.game);
         if ((!keyboardHandler.keysHeld["ArrowLeft"] && !keyboardHandler.keysHeld["ArrowRight"]))
-            if (Math.abs(this.mid_x() - this.target_x) < this.width / 4) {
+            if (Math.abs(this.mid_x() - this.target_x) < this.width / 10) {
                 this.vel_x /= 2;
                 this.accel_x /= 2;
             }
@@ -249,7 +250,6 @@ class Paddle extends Brick {
         {
             this.x += this.vel_x * delta_time / 1000;
         }
-        update_state_super(this.power_up_type, delta_time, this.game);
     }
     set_power_up(brick) {
         this.power_up_type = power_ups[brick.type_id];
@@ -259,9 +259,6 @@ class Paddle extends Brick {
         if (this.power_up_type.power_up_count_down > 0 && this.power_up_type.power_up_cool_down <= 0) {
             use_super(this.power_up_type, game);
         }
-    }
-    get_power_up_desc() {
-        return this.power_up_type.desc();
     }
     draw(canvas, ctx, x = this.x, y = this.y, width = this.width, height = this.height) {
         ctx.strokeStyle = "#000000";
@@ -608,7 +605,7 @@ async function main() {
             game.resize(width, height);
             canvas.width = width;
             canvas.height = height;
-            game.paddle.update_state_paddle(0, game);
+            //game.paddle.update_state_paddle(0, game);
         }
         dt = Date.now() - start;
         time_queue.push(dt);

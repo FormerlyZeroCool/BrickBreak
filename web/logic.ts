@@ -300,8 +300,9 @@ class Paddle extends Brick {
         this.vel_x += Math.abs(this.vel_x) < this.target_vel_x ? 
         this.accel_x * delta_time / 1000 : 
         0;
+        update_state_super(this.power_up_type, delta_time, this.game);
         if((!keyboardHandler.keysHeld["ArrowLeft"] && !keyboardHandler.keysHeld["ArrowRight"]))
-        if(Math.abs(this.mid_x() - this.target_x) < this.width / 4)
+        if(Math.abs(this.mid_x() - this.target_x) < this.width / 10)
         {
             this.vel_x /= 2;
             this.accel_x /= 2;
@@ -310,7 +311,6 @@ class Paddle extends Brick {
         {
             this.x += this.vel_x * delta_time / 1000;
         }
-        update_state_super(this.power_up_type, delta_time, this.game);
         
     }
     set_power_up(brick:Brick):void
@@ -324,10 +324,6 @@ class Paddle extends Brick {
         {
             use_super(this.power_up_type, game);
         }
-    }
-    get_power_up_desc():string
-    {
-        return this.power_up_type.desc();
     }
     draw(canvas: HTMLCanvasElement, ctx: CanvasRenderingContext2D, x: number = this.x, y: number = this.y, width: number = this.width, height: number = this.height): void {
         
@@ -747,7 +743,7 @@ async function main()
             game.resize(width, height);
             canvas.width = width;
             canvas.height = height;
-            game.paddle.update_state_paddle(0, game);
+            //game.paddle.update_state_paddle(0, game);
         }
         dt = Date.now() - start;
         time_queue.push(dt);
