@@ -134,84 +134,7 @@ class PowerUpSuperBall extends PowerUp {
 const power_ups:PowerUp[] = []
 power_ups.push(new PowerUp(0, 0, 0), new PowerUpExtraPoints(), new PowerUpRandomBall(), new PowerUpDoubleWide(), 
         new PowerUpDoubleAndAHalfWide(), new PowerUpSuperBall());
-class Ball extends SpatiallyMappableCircle {
-    radius:number;
-    direction:number[];
-    attack_power:number;
-    constructor(x:number, y:number, radius:number)
-    {
-        super(x - radius, y - radius, radius * 2, radius * 2);
-        this.radius = radius;
-        this.direction = [0, 0];
-        this.attack_power = 1;
-    }
-    released():boolean
-    {
-        return this.direction[0] !== 0 || this.direction[1] !== 0;
-    }
-    release():void
-    {
-        if(!this.released())
-        {
-            srand(Math.random());
-            this.direction = [(random() - 0.5) * getWidth() / 3, -random() * getHeight() / 2  - 100];
-        }
-    }
-    mid_x(): number {
-        return this.x + this.width / 2;
-    }
-    mid_y(): number {
-        return this.y + this.height / 2;
-    }
-    draw(canvas: HTMLCanvasElement, ctx: CanvasRenderingContext2D, x:number = this.x, y:number = this.y, width: number = this.width, height: number = this.height): void {
-        ctx.beginPath();
-        ctx.lineWidth = 5;
-        ctx.strokeStyle = "#00FF00";
-        ctx.fillStyle = "#FF0000";
-        ctx.moveTo(x + this.radius * 2, y + this.radius);
-        ctx.arc(x + this.radius, y + this.radius, this.radius, 0, 2 * Math.PI);
-        ctx.stroke();
-        ctx.fill();
-        ctx.beginPath();
-    }
-    update_state(delta_time: number): void {
-        this.x += this.direction[0] * delta_time / 1000;
-        this.y += this.direction[1] * delta_time / 1000;
-    }
-    bounce(x:number, y:number, width:number, height:number):boolean
-    {
-        if(this.x + this.width >= x + width)
-        {
-            if(this.direction[0] > 0)
-                this.direction[0] *= -1;
-            return false;
-        }
-        else if(this.x <= 0)
-        {
-            if(this.direction[0] < 0)
-                this.direction[0] *= -1;
-            return false;
-        }
-        else if(this.y + this.height >= y + height)
-        {
-            //if(this.direction[1] > 0)
-              //  this.direction[1] *= -1;
-            return true;
-        }
-        else if(this.y <= 0)
-        {
-            if(this.direction[1] < 0)
-                this.direction[1] *= -1;
-            return false;
-        }
-        return false;
-    }
-    hit(brick:Brick):void
-    {
-        brick.take_damage(this.attack_power);
-        this.direction[1] *= 1.05;
-    }
-};
+
 class Brick extends SquareAABBCollidable {
     hp:number;
     type_id:number;
@@ -264,12 +187,6 @@ class Brick extends SquareAABBCollidable {
     }
 
 };
-function calc_x_vel_paddle():number
-{
-    return Math.max(getWidth(), getHeight()) / (isTouchSupported() ? 1 : 2);
-}
-const keyboardHandler:KeyboardHandler = new KeyboardHandler();
-
 class Paddle extends Brick {
 
     vel_x:number;
@@ -348,6 +265,90 @@ class Paddle extends Brick {
         ctx.fillRect(x, y, width, height);
     }
 }
+class Ball extends SpatiallyMappableCircle {
+    radius:number;
+    direction:number[];
+    attack_power:number;
+    constructor(x:number, y:number, radius:number)
+    {
+        super(x - radius, y - radius, radius * 2, radius * 2);
+        this.radius = radius;
+        this.direction = [0, 0];
+        this.attack_power = 1;
+    }
+    released():boolean
+    {
+        return this.direction[0] !== 0 || this.direction[1] !== 0;
+    }
+    release():void
+    {
+        if(!this.released())
+        {
+            srand(Math.random());
+            this.direction = [(random() - 0.5) * getWidth() / 3, -random() * getHeight() / 2  - 100];
+        }
+    }
+    mid_x(): number {
+        return this.x + this.width / 2;
+    }
+    mid_y(): number {
+        return this.y + this.height / 2;
+    }
+    draw(canvas: HTMLCanvasElement, ctx: CanvasRenderingContext2D, x:number = this.x, y:number = this.y, width: number = this.width, height: number = this.height): void {
+        ctx.beginPath();
+        ctx.lineWidth = 5;
+        ctx.strokeStyle = "#00FF00";
+        ctx.fillStyle = "#FF0000";
+        ctx.moveTo(x + this.radius * 2, y + this.radius);
+        ctx.arc(x + this.radius, y + this.radius, this.radius, 0, 2 * Math.PI);
+        ctx.stroke();
+        ctx.fill();
+        ctx.beginPath();
+    }
+    update_state(delta_time: number): void {
+        this.x += this.direction[0] * delta_time / 1000;
+        this.y += this.direction[1] * delta_time / 1000;
+    }
+    bounce(x:number, y:number, width:number, height:number):boolean
+    {
+        if(this.x + this.width >= x + width)
+        {
+            if(this.direction[0] > 0)
+                this.direction[0] *= -1;
+            return false;
+        }
+        else if(this.x <= 0)
+        {
+            if(this.direction[0] < 0)
+                this.direction[0] *= -1;
+            return false;
+        }
+        else if(this.y + this.height >= y + height)
+        {
+            //if(this.direction[1] > 0)
+              //  this.direction[1] *= -1;
+            return true;
+        }
+        else if(this.y <= 0)
+        {
+            if(this.direction[1] < 0)
+                this.direction[1] *= -1;
+            return false;
+        }
+        return false;
+    }
+    hit(brick:Brick):void
+    {
+        brick.take_damage(this.attack_power);
+        this.direction[1] *= 1.05;
+    }
+};
+function calc_x_vel_paddle():number
+{
+    return Math.max(getWidth(), getHeight()) / (isTouchSupported() ? 1 : 2);
+}
+const keyboardHandler:KeyboardHandler = new KeyboardHandler();
+
 class Game extends SquareAABBCollidable {
     collision_map:SpatialHashMap2D;
     bricks:Brick[];
@@ -576,9 +577,13 @@ class Game extends SquareAABBCollidable {
                         b.y = paddle.y - b.height;
                         b.direction[1] *= -1;
                         b.direction[0] += this.paddle.vel_x;
+                        if(Math.abs(b.direction[0]) > this.paddle.target_vel_x)
+                        {
+                            b.direction[0]= this.paddle.target_vel_x * +(b.direction[0] < 0) - this.paddle.target_vel_x * +(b.direction[0] >= 0);
+                        }
                     }
-                    if(b.direction[1] > -200)
-                        b.direction[1] += -200;
+                    if(b.direction[1] > -this.height / 4)
+                        b.direction[1] = -this.height / 3;
                 }
             } 
         },
@@ -705,7 +710,7 @@ async function main()
     const ostart = Date.now();
     let frame_count = 0;
     let instantaneous_fps = 0;
-    const time_queue:FixedSizeQueue<number> = new FixedSizeQueue<number>(60 * 5);
+    const time_queue:FixedSizeQueue<number> = new FixedSizeQueue<number>(60 * 2);
     const drawLoop = () => 
     {
         frame_count++;

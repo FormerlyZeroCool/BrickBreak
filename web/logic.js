@@ -110,6 +110,105 @@ class PowerUpSuperBall extends PowerUp {
 }
 const power_ups = [];
 power_ups.push(new PowerUp(0, 0, 0), new PowerUpExtraPoints(), new PowerUpRandomBall(), new PowerUpDoubleWide(), new PowerUpDoubleAndAHalfWide(), new PowerUpSuperBall());
+class Brick extends SquareAABBCollidable {
+    constructor(x, y, width, height) {
+        super(x, y, width, height);
+        this.type_id = Math.floor(random() * (power_ups.length - 1)) + 1;
+        this.hp = Math.floor(this.type_id);
+        const radius = Math.min(this.width, this.height) / 2;
+        this.polygon = new RegularPolygon(radius, this.type_id + 2);
+    }
+    resize(width, height) {
+        this.width = width;
+        this.height = height;
+        this.polygon.resize_radius(Math.min(width, height) / 2);
+    }
+    take_damage(damage) {
+        this.hp -= damage;
+    }
+    draw(canvas, ctx, x = this.x, y = this.y, width = this.width, height = this.height) {
+        ctx.lineWidth = 3;
+        ctx.strokeStyle = "#000000";
+        ctx.fillStyle = new RGB(125 + 60 * this.type_id % 256, 92 * this.type_id % 256, 125 * this.type_id % 256).htmlRBG();
+        ctx.strokeRect(x, y, width, height);
+        ctx.fillRect(x, y, width, height);
+        ctx.beginPath();
+        this.polygon.render(ctx, x + this.width / 2 - this.polygon.width() / 2, y + this.height / 2 - this.polygon.height() / 2);
+        ctx.fillStyle = new RGB(125 + 60 * this.type_id % 256, 125 + 92 * this.type_id % 256, 125 + 125 * this.type_id % 256).htmlRBG();
+        ctx.fill();
+        if (this.hp > 0) {
+            ctx.fillStyle = "#FFFFFF";
+            ctx.strokeStyle = "#000000";
+            const text_width = ctx.measureText("" + this.hp).width;
+            ctx.font = `${Math.min(canvas.height, canvas.width) > 700 ? 14 : 9}px Comic Sans`;
+            ctx.strokeText("" + this.hp, this.mid_x() - text_width / 2, this.mid_y());
+            ctx.fillText("" + this.hp, this.mid_x() - text_width / 2, this.mid_y());
+        }
+    }
+    update_state(delta_time) {
+        if (this.hp <= 0) {
+            srand(this.type_id);
+            this.y += (random() * 200 + 200) * delta_time / 1000;
+        }
+    }
+}
+;
+class Paddle extends Brick {
+    constructor(game, x, y, width, height) {
+        super(x, y, width, height);
+        this.game = game;
+        this.unscaled_width = width * 2;
+        this.accel_x = 0;
+        this.target_vel_x = calc_x_vel_paddle();
+        this.vel_x = 0;
+        this.power_up_type = power_ups[0];
+    }
+    update_state_paddle(delta_time, game) {
+        this.update_state(delta_time);
+        if (this.x > game.width) {
+            this.x = -this.width;
+        }
+        if (this.x + this.width < 0) {
+            this.x = game.width;
+        }
+    }
+    update_state(delta_time) {
+        this.vel_x += Math.abs(this.vel_x) < this.target_vel_x ?
+            this.accel_x * delta_time / 1000 :
+            0;
+        update_state_super(this.power_up_type, delta_time, this.game);
+        if ((!keyboardHandler.keysHeld["ArrowLeft"] && !keyboardHandler.keysHeld["ArrowRight"]))
+            if (Math.abs(this.mid_x() - this.target_x) < this.width / 10) {
+                this.vel_x /= 2;
+                this.accel_x /= 2;
+            }
+        //if((keyboardHandler.keysHeld["ArrowLeft"] || keyboardHandler.keysHeld["ArrowRight"]))
+        {
+            this.x += this.vel_x * delta_time / 1000;
+        }
+    }
+    set_power_up(brick) {
+        const new_power_up = power_ups[brick.type_id];
+        if (this.power_up_type.type_id == 0 || new_power_up.type_id > 1 && this.power_up_type.power_up_count_down <= 0) {
+            this.power_up_type = new_power_up;
+            this.power_up_type.power_up_count_down = this.power_up_type.init_count_down;
+        }
+        else if (new_power_up.type_id === 1) {
+            this.power_up_type.power_up_count_down = this.power_up_type.init_count_down;
+        }
+    }
+    use_power_up(game) {
+        if (this.power_up_type.power_up_count_down > 0 && this.power_up_type.power_up_cool_down <= 0) {
+            use_super(this.power_up_type, game);
+        }
+    }
+    draw(canvas, ctx, x = this.x, y = this.y, width = this.width, height = this.height) {
+        ctx.strokeStyle = "#000000";
+        ctx.fillStyle = new RGB(125 + 60 * this.type_id % 256, 92 * this.type_id % 256, 125 * this.type_id % 256).htmlRBG();
+        ctx.strokeRect(x, y, width, height);
+        ctx.fillRect(x, y, width, height);
+    }
+}
 class Ball extends SpatiallyMappableCircle {
     constructor(x, y, radius) {
         super(x - radius, y - radius, radius * 2, radius * 2);
@@ -176,109 +275,10 @@ class Ball extends SpatiallyMappableCircle {
     }
 }
 ;
-class Brick extends SquareAABBCollidable {
-    constructor(x, y, width, height) {
-        super(x, y, width, height);
-        this.type_id = Math.floor(random() * (power_ups.length - 1)) + 1;
-        this.hp = Math.floor(this.type_id);
-        const radius = Math.min(this.width, this.height) / 2;
-        this.polygon = new RegularPolygon(radius, this.type_id + 2);
-    }
-    resize(width, height) {
-        this.width = width;
-        this.height = height;
-        this.polygon.resize_radius(Math.min(width, height) / 2);
-    }
-    take_damage(damage) {
-        this.hp -= damage;
-    }
-    draw(canvas, ctx, x = this.x, y = this.y, width = this.width, height = this.height) {
-        ctx.lineWidth = 3;
-        ctx.strokeStyle = "#000000";
-        ctx.fillStyle = new RGB(125 + 60 * this.type_id % 256, 92 * this.type_id % 256, 125 * this.type_id % 256).htmlRBG();
-        ctx.strokeRect(x, y, width, height);
-        ctx.fillRect(x, y, width, height);
-        ctx.beginPath();
-        this.polygon.render(ctx, x + this.width / 2 - this.polygon.width() / 2, y + this.height / 2 - this.polygon.height() / 2);
-        ctx.fillStyle = new RGB(125 + 60 * this.type_id % 256, 125 + 92 * this.type_id % 256, 125 + 125 * this.type_id % 256).htmlRBG();
-        ctx.fill();
-        if (this.hp > 0) {
-            ctx.fillStyle = "#FFFFFF";
-            ctx.strokeStyle = "#000000";
-            const text_width = ctx.measureText("" + this.hp).width;
-            ctx.font = `${Math.min(canvas.height, canvas.width) > 700 ? 14 : 9}px Comic Sans`;
-            ctx.strokeText("" + this.hp, this.mid_x() - text_width / 2, this.mid_y());
-            ctx.fillText("" + this.hp, this.mid_x() - text_width / 2, this.mid_y());
-        }
-    }
-    update_state(delta_time) {
-        if (this.hp <= 0) {
-            srand(this.type_id);
-            this.y += (random() * 200 + 200) * delta_time / 1000;
-        }
-    }
-}
-;
 function calc_x_vel_paddle() {
     return Math.max(getWidth(), getHeight()) / (isTouchSupported() ? 1 : 2);
 }
 const keyboardHandler = new KeyboardHandler();
-class Paddle extends Brick {
-    constructor(game, x, y, width, height) {
-        super(x, y, width, height);
-        this.game = game;
-        this.unscaled_width = width * 2;
-        this.accel_x = 0;
-        this.target_vel_x = calc_x_vel_paddle();
-        this.vel_x = 0;
-        this.power_up_type = power_ups[0];
-    }
-    update_state_paddle(delta_time, game) {
-        this.update_state(delta_time);
-        if (this.x > game.width) {
-            this.x = -this.width;
-        }
-        if (this.x + this.width < 0) {
-            this.x = game.width;
-        }
-    }
-    update_state(delta_time) {
-        this.vel_x += Math.abs(this.vel_x) < this.target_vel_x ?
-            this.accel_x * delta_time / 1000 :
-            0;
-        update_state_super(this.power_up_type, delta_time, this.game);
-        if ((!keyboardHandler.keysHeld["ArrowLeft"] && !keyboardHandler.keysHeld["ArrowRight"]))
-            if (Math.abs(this.mid_x() - this.target_x) < this.width / 10) {
-                this.vel_x /= 2;
-                this.accel_x /= 2;
-            }
-        //if((keyboardHandler.keysHeld["ArrowLeft"] || keyboardHandler.keysHeld["ArrowRight"]))
-        {
-            this.x += this.vel_x * delta_time / 1000;
-        }
-    }
-    set_power_up(brick) {
-        const new_power_up = power_ups[brick.type_id];
-        if (this.power_up_type.type_id == 0 || new_power_up.type_id > 1 && this.power_up_type.power_up_count_down <= 0) {
-            this.power_up_type = new_power_up;
-            this.power_up_type.power_up_count_down = this.power_up_type.init_count_down;
-        }
-        else if (new_power_up.type_id === 1) {
-            this.power_up_type.power_up_count_down = this.power_up_type.init_count_down;
-        }
-    }
-    use_power_up(game) {
-        if (this.power_up_type.power_up_count_down > 0 && this.power_up_type.power_up_cool_down <= 0) {
-            use_super(this.power_up_type, game);
-        }
-    }
-    draw(canvas, ctx, x = this.x, y = this.y, width = this.width, height = this.height) {
-        ctx.strokeStyle = "#000000";
-        ctx.fillStyle = new RGB(125 + 60 * this.type_id % 256, 92 * this.type_id % 256, 125 * this.type_id % 256).htmlRBG();
-        ctx.strokeRect(x, y, width, height);
-        ctx.fillRect(x, y, width, height);
-    }
-}
 class Game extends SquareAABBCollidable {
     constructor(touchListener, starting_lives, x, y, width, height) {
         super(x, y, width, height);
@@ -466,9 +466,12 @@ class Game extends SquareAABBCollidable {
                         b.y = paddle.y - b.height;
                         b.direction[1] *= -1;
                         b.direction[0] += this.paddle.vel_x;
+                        if (Math.abs(b.direction[0]) > this.paddle.target_vel_x) {
+                            b.direction[0] = this.paddle.target_vel_x * +(b.direction[0] < 0) - this.paddle.target_vel_x * +(b.direction[0] >= 0);
+                        }
                     }
-                    if (b.direction[1] > -200)
-                        b.direction[1] += -200;
+                    if (b.direction[1] > -this.height / 4)
+                        b.direction[1] = -this.height / 3;
                 }
             }
         }, (brick, ball) => {
@@ -572,7 +575,7 @@ async function main() {
     const ostart = Date.now();
     let frame_count = 0;
     let instantaneous_fps = 0;
-    const time_queue = new FixedSizeQueue(60 * 5);
+    const time_queue = new FixedSizeQueue(60 * 2);
     const drawLoop = () => {
         frame_count++;
         //do stuff and render here
