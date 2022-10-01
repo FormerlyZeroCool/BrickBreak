@@ -37,7 +37,7 @@ export function get_normal_vector_aabb_rect_circle_collision(ball, brick) {
             }
             else //bottom right
              {
-                delta = [brick.x + brick.width - ball.mid_x(), brick.y + brick.height - ball.mid_y()];
+                delta = [-brick.x - brick.width + ball.mid_x(), brick.y + brick.height - ball.mid_y()];
                 point_collision[0] = brick.x + brick.width;
                 point_collision[1] = brick.y + brick.height;
             }
