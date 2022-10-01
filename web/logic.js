@@ -427,7 +427,8 @@ class Game extends SquareAABBCollidable {
         for (let i = 0; i < this.balls.length; i++) {
             const ball = this.balls[i];
             ball.update_state(delta_time);
-            const destroy_ball = ball.bounce(this.x, this.y, this.width, this.height);
+            const destroy_ball = ball.bounce(this.x, this.y, this.width, this.height) || ball.mid_x() + ball.radius < 0 || ball.mid_x() - ball.radius > this.width ||
+                ball.mid_y() + ball.radius < 0 || ball.mid_y() - ball.radius > this.height;
             if (!ball.released()) {
                 ball.x = this.paddle.mid_x() - ball.radius;
                 ball.y = this.paddle.y - this.height * 0.05 - 5;
@@ -438,51 +439,52 @@ class Game extends SquareAABBCollidable {
                     this.balls.splice(ball_index, 1);
             }
         }
-        this.collision_map = new SpatialHashMap2D(this.balls.concat([this.paddle]), this.bricks, this.width, this.height, 20, 20);
-        this.collision_map.handle_by_cell((ball, brick) => {
-            if (ball.radius && brick.collides_with_circle(ball)) {
-                const b = ball;
-                if (brick === this.paddle) {
-                    if (b.direction[1] > 0) {
-                        //b.direction[1] *= -1;
-                        if (this.old_paddle_style) {
-                            const angle = Math.round(((b.mid_x() - brick.x) / brick.width) * Math.PI * 20) / 20;
-                            const mag = Math.sqrt(b.direction[0] * b.direction[0] + b.direction[1] * b.direction[1]);
-                            b.direction[0] = Math.cos(angle) * mag * -1;
-                            b.direction[1] = Math.sin(angle) * mag * -1;
-                        }
-                        else {
-                            b.y = brick.y - b.height;
-                            b.direction[1] *= -1;
-                            b.direction[0] += this.paddle.vel_x;
-                        }
-                        if (b.direction[1] > -200)
-                            b.direction[1] += -200;
-                    }
-                }
-            }
-        }, (a, b) => {
-            const brick = b;
-            const ball = a;
-            if (a === this.paddle && brick.hp !== undefined && brick.hp <= 0) {
+        this.collision_map = new SpatialHashMap2D([this.paddle], this.bricks, this.balls, this.width, this.height, 20, 20);
+        this.collision_map.handle_by_cell((paddle, paddle2) => {
+        }, (paddle, brick) => {
+            if (paddle === this.paddle && brick.hp !== undefined && brick.hp <= 0) {
                 const falling = brick;
                 if (falling.hp <= 0) {
                     const tdb_index = this.bricks.indexOf(falling);
-                    a.set_power_up(brick);
+                    (paddle).set_power_up(brick);
                     if (tdb_index >= 0)
                         this.bricks.splice(tdb_index, 1);
                 }
             }
-            else if (ball.radius && (brick).hp > 0 && brick !== this.paddle) {
-                const collision_code = brick.collides_with_circle(ball);
-                //collision code 0 no collision
-                //1 corner collision
-                //2 edge collision
-                const normal = get_normal_vector_aabb_rect_circle_collision(ball, brick);
-                if (normal[0] !== 0 || normal[1] !== 0) {
-                    ball.hit(brick);
-                    ball.direction = non_elastic_no_angular_momentum_bounce_vector(ball.direction, normal);
-                    ball.update_state(delta_time);
+        }, (paddle, ball) => {
+            if (paddle === this.paddle && ball.radius !== undefined) {
+                const b = ball;
+                if (b.direction[1] > 0) {
+                    //b.direction[1] *= -1;
+                    if (this.old_paddle_style) {
+                        const angle = Math.round(((b.mid_x() - paddle.x) / paddle.width) * Math.PI * 20) / 20;
+                        const mag = Math.sqrt(b.direction[0] * b.direction[0] + b.direction[1] * b.direction[1]);
+                        b.direction[0] = Math.cos(angle) * mag * -1;
+                        b.direction[1] = Math.sin(angle) * mag * -1;
+                    }
+                    else {
+                        b.y = paddle.y - b.height;
+                        b.direction[1] *= -1;
+                        b.direction[0] += this.paddle.vel_x;
+                    }
+                    if (b.direction[1] > -200)
+                        b.direction[1] += -200;
+                }
+            }
+        }, (brick, ball) => {
+            if (ball.radius && brick.collides_with_circle(ball)) {
+                const b = ball;
+                if (ball.radius && (brick).hp > 0 && brick !== this.paddle) {
+                    const collision_code = brick.collides_with_circle(ball);
+                    //collision code 0 no collision
+                    //1 corner collision
+                    //2 edge collision
+                    const normal = get_normal_vector_aabb_rect_circle_collision(ball, brick);
+                    if (normal[0] !== 0 || normal[1] !== 0) {
+                        ball.hit(brick);
+                        ball.direction = non_elastic_no_angular_momentum_bounce_vector(ball.direction, normal);
+                        ball.update_state(delta_time);
+                    }
                 }
             }
         });
