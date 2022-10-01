@@ -579,7 +579,7 @@ class Game extends SquareAABBCollidable {
                         b.direction[0] += this.paddle.vel_x;
                         if(Math.abs(b.direction[0]) > this.paddle.target_vel_x)
                         {
-                            b.direction[0]= this.paddle.target_vel_x * +(b.direction[0] < 0) - this.paddle.target_vel_x * +(b.direction[0] >= 0);
+                            b.direction[0] = this.paddle.target_vel_x * +(b.direction[0] >= 0) - this.paddle.target_vel_x * +(b.direction[0] < 0);
                         }
                     }
                     if(b.direction[1] > -this.height / 4)
