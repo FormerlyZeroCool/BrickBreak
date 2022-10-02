@@ -133,17 +133,26 @@ class Brick extends SquareAABBCollidable {
         ctx.strokeRect(x, y, width, height);
         ctx.fillRect(x, y, width, height);
         ctx.beginPath();
+        if (this.hp > 0) {
+            this.polygon.sides = this.hp + 2;
+            this.polygon.resize_radius(Math.min(width, height) / 2);
+        }
+        else {
+            this.polygon.sides = this.type_id + 2;
+            this.polygon.resize_radius(Math.min(width, height) / 2);
+        }
         this.polygon.render(ctx, x + this.width / 2 - this.polygon.width() / 2, y + this.height / 2 - this.polygon.height() / 2);
         ctx.fillStyle = new RGB(125 + 60 * this.type_id % 256, 125 + 92 * this.type_id % 256, 125 + 125 * this.type_id % 256).htmlRBG();
         ctx.fill();
-        if (this.hp > 0) {
+        /*if(this.hp > 0)
+        {
             ctx.fillStyle = "#FFFFFF";
             ctx.strokeStyle = "#000000";
-            const text_width = ctx.measureText("" + this.hp).width;
-            ctx.font = `${Math.min(canvas.height, canvas.width) > 700 ? 14 : 9}px Comic Sans`;
-            ctx.strokeText("" + this.hp, this.mid_x() - text_width / 2, this.mid_y());
-            ctx.fillText("" + this.hp, this.mid_x() - text_width / 2, this.mid_y());
-        }
+            const text_width = ctx.measureText(""+this.hp).width;
+            ctx.font = `${Math.min(canvas.height, canvas.width) > 700 ? 14 : 9}px Comic Sans`
+            ctx.strokeText(""+this.hp, this.mid_x() - text_width / 2, this.mid_y());
+            ctx.fillText(""+this.hp, this.mid_x() - text_width / 2, this.mid_y());
+        }*/
     }
     update_state(delta_time) {
         if (this.hp <= 0) {
