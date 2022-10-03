@@ -13,33 +13,41 @@ export function get_normal_vector_aabb_rect_circle_collision(ball, brick) {
         const point_collision = [-1, -1];
         if (ball.mid_x() < brick.mid_x()) //left side
          {
-            if (ball.mid_y() > brick.mid_y()) //top left
+            if (ball.mid_y() < brick.mid_y()) //top left
              {
-                delta = [brick.x - ball.mid_x(), brick.y - ball.mid_y()];
+                delta = [-brick.x + ball.mid_x(), brick.y - ball.mid_y()];
                 point_collision[0] = brick.x;
                 point_collision[1] = brick.y;
+                console.log("top left");
+                console.log(delta);
             }
             else //bottom left
              {
-                delta = [brick.x - ball.mid_x(), brick.y + brick.height - ball.mid_y()];
+                delta = [-brick.x + ball.mid_x(), -brick.y - brick.height + ball.mid_y()];
                 point_collision[0] = brick.x;
                 point_collision[1] = brick.y + brick.height;
+                console.log("bottom left");
+                console.log(delta);
             }
         }
         else {
-            if (ball.mid_y() > brick.mid_y()) //top right
+            if (ball.mid_y() < brick.mid_y()) //top right
              {
-                delta = [-brick.x - brick.width + ball.mid_x(), brick.y - ball.mid_y()];
+                delta = [-brick.x - brick.width + ball.mid_x(), -brick.y + ball.mid_y()];
                 //delta[0] *= -1;
                 //delta[1] *= -1;
                 point_collision[0] = brick.x + brick.width;
                 point_collision[1] = brick.y;
+                console.log("top right");
+                console.log(delta);
             }
             else //bottom right
              {
-                delta = [-brick.x - brick.width + ball.mid_x(), brick.y + brick.height - ball.mid_y()];
+                delta = [-brick.x - brick.width + ball.mid_x(), -brick.y - brick.height + ball.mid_y()];
                 point_collision[0] = brick.x + brick.width;
                 point_collision[1] = brick.y + brick.height;
+                console.log("bottom right");
+                console.log(delta);
             }
         }
         //invert vector to be normal vector for corner
