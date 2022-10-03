@@ -117,6 +117,7 @@ export function manhattan_distance(a:SquareAABBCollidable, b:SquareAABBCollidabl
     return dx + dy;
 }
 export interface GameObject {
+    direction:number[];
     draw(canvas:HTMLCanvasElement, ctx:CanvasRenderingContext2D, x:number, y:number, width:number, height:number):void;
     update_state(delta_time:number):void;
 };
@@ -154,13 +155,15 @@ export class SquareAABBCollidable implements Collidable, GameObject {
     y:number;
     width:number;
     height:number;
+    direction:number[];
 
-    constructor(x:number, y:number, width:number, height:number)
+    constructor(x:number, y:number, width:number, height:number, vel_x:number = 0, vel_y:number = 0)
     {
         this.x = x;
         this.y = y;
         this.width = width;
         this.height = height;
+        this.direction = [vel_x, vel_y];
     }
     collides_with_circle(circle:Circle):number
     {
@@ -181,7 +184,8 @@ export class SquareAABBCollidable implements Collidable, GameObject {
         throw new Error('Method not implemented.');
     }
     update_state(delta_time: number): void {
-        throw new Error('Method not implemented.');
+        this.x += this.direction[0] * delta_time * 1/1000;
+        this.y += this.direction[1] * delta_time * 1/1000;
     }
     max_width():number { return this.width; }
     max_height():number {return this.height; }

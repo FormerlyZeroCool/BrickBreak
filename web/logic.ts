@@ -316,8 +316,7 @@ class Ball extends SpatiallyMappableCircle {
         ctx.beginPath();
     }
     update_state(delta_time: number): void {
-        this.x += this.direction[0] * delta_time / 1000;
-        this.y += this.direction[1] * delta_time / 1000;
+        super.update_state(delta_time);
     }
     bounce(x:number, y:number, width:number, height:number):boolean
     {
@@ -350,7 +349,7 @@ class Ball extends SpatiallyMappableCircle {
     hit(brick:Brick):void
     {
         brick.take_damage(this.attack_power);
-        this.direction[1] *= 1.05;
+        this.direction[1] *= 1.0;
     }
 };
 function calc_x_vel_paddle():number
@@ -611,6 +610,20 @@ class Game extends SquareAABBCollidable {
                     //collision code 0 no collision
                     //1 corner collision
                     //2 edge collision
+                    
+                    //if dist between ball center, and rect center 
+                    //is greater than Max(brick.width/2, brick.height/2) + ball.radius
+                    //take diff between dist above, and Max(brick.width/2, brick.height/2) + ball.radius
+                    //move ball by multiplying that diff by the components of dir, and translating ball by result
+                    const dist = distance(ball, brick);
+                    const max_dist = Math.max(brick.width / 2, brick.height / 2) + ball.radius;
+                    if(dist > max_dist)
+                    {
+                        const delta_mag:number = ball.mid_y() > brick.mid_y()?-max_dist + dist:max_dist - dist;
+                        const norm_dir = normalize2D(ball.direction);
+                        ball.x += norm_dir[0] * delta_mag;
+                        ball.y += norm_dir[1] * delta_mag;
+                    }
                     const normal:number[] = get_normal_vector_aabb_rect_circle_collision(ball, brick);
                     if(normal[0] !== 0 || normal[1] !== 0)
                     {

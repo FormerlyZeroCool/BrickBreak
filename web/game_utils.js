@@ -13,41 +13,33 @@ export function get_normal_vector_aabb_rect_circle_collision(ball, brick) {
         const point_collision = [-1, -1];
         if (ball.mid_x() < brick.mid_x()) //left side
          {
-            if (ball.mid_y() < brick.mid_y()) //top left
+            if (ball.mid_y() > brick.mid_y()) //top left
              {
-                delta = [-brick.x + ball.mid_x(), brick.y - ball.mid_y()];
+                delta = [brick.x - ball.mid_x(), brick.y - ball.mid_y()];
                 point_collision[0] = brick.x;
                 point_collision[1] = brick.y;
-                console.log("top left");
-                console.log(delta);
             }
             else //bottom left
              {
-                delta = [-brick.x + ball.mid_x(), -brick.y - brick.height + ball.mid_y()];
+                delta = [brick.x - ball.mid_x(), brick.y + brick.height - ball.mid_y()];
                 point_collision[0] = brick.x;
                 point_collision[1] = brick.y + brick.height;
-                console.log("bottom left");
-                console.log(delta);
             }
         }
         else {
-            if (ball.mid_y() < brick.mid_y()) //top right
+            if (ball.mid_y() > brick.mid_y()) //top right
              {
-                delta = [-brick.x - brick.width + ball.mid_x(), -brick.y + ball.mid_y()];
+                delta = [-brick.x - brick.width + ball.mid_x(), brick.y - ball.mid_y()];
                 //delta[0] *= -1;
                 //delta[1] *= -1;
                 point_collision[0] = brick.x + brick.width;
                 point_collision[1] = brick.y;
-                console.log("top right");
-                console.log(delta);
             }
             else //bottom right
              {
-                delta = [-brick.x - brick.width + ball.mid_x(), -brick.y - brick.height + ball.mid_y()];
+                delta = [-brick.x - brick.width + ball.mid_x(), brick.y + brick.height - ball.mid_y()];
                 point_collision[0] = brick.x + brick.width;
                 point_collision[1] = brick.y + brick.height;
-                console.log("bottom right");
-                console.log(delta);
             }
         }
         //invert vector to be normal vector for corner
@@ -106,11 +98,12 @@ export function manhattan_distance(a, b) {
 ;
 ;
 export class SquareAABBCollidable {
-    constructor(x, y, width, height) {
+    constructor(x, y, width, height, vel_x = 0, vel_y = 0) {
         this.x = x;
         this.y = y;
         this.width = width;
         this.height = height;
+        this.direction = [vel_x, vel_y];
     }
     collides_with_circle(circle) {
         const dx = Math.abs(circle.mid_x() - this.mid_x());
@@ -132,7 +125,8 @@ export class SquareAABBCollidable {
         throw new Error('Method not implemented.');
     }
     update_state(delta_time) {
-        throw new Error('Method not implemented.');
+        this.x += this.direction[0] * delta_time * 1 / 1000;
+        this.y += this.direction[1] * delta_time * 1 / 1000;
     }
     max_width() { return this.width; }
     max_height() { return this.height; }
