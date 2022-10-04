@@ -597,8 +597,8 @@ class Game extends SquareAABBCollidable {
             } 
         },
         (brick:Brick, ball:Ball) => {
-
-            if((<Ball> ball).radius && brick.collides_with_circle(<Ball> ball))
+            const collision_code = brick.collides_with_circle(<Ball> ball);
+            if((<Ball> ball).radius && collision_code)
             {
                 const b = <Ball> ball;
                 
@@ -610,7 +610,12 @@ class Game extends SquareAABBCollidable {
                     //collision code 0 no collision
                     //1 corner collision
                     //2 edge collision
-                    
+                    ball.direction[0] *= -1;
+                    ball.direction[1] *= -1;
+                    ball.update_state(delta_time);
+                    ball.direction[0] *= -1;
+                    ball.direction[1] *= -1;
+
                     //if dist between ball center, and rect center 
                     //is greater than Max(brick.width/2, brick.height/2) + ball.radius
                     //take diff between dist above, and Max(brick.width/2, brick.height/2) + ball.radius
@@ -624,6 +629,14 @@ class Game extends SquareAABBCollidable {
                         ball.x += norm_dir[0] * delta_mag;
                         ball.y += norm_dir[1] * delta_mag;
                     }
+                    else if(dist < max_dist && collision_code === 1)
+                    {
+                        const delta_mag:number = ball.mid_y() > brick.mid_y()?-max_dist + dist:max_dist - dist;
+                        const norm_dir = normalize2D(ball.direction);
+                        ball.x += norm_dir[0] * delta_mag;
+                        ball.y += norm_dir[1] * delta_mag;
+                    }
+
                     const normal:number[] = get_normal_vector_aabb_rect_circle_collision(ball, brick);
                     if(normal[0] !== 0 || normal[1] !== 0)
                     {

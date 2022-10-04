@@ -483,13 +483,19 @@ class Game extends SquareAABBCollidable {
                 }
             }
         }, (brick, ball) => {
-            if (ball.radius && brick.collides_with_circle(ball)) {
+            const collision_code = brick.collides_with_circle(ball);
+            if (ball.radius && collision_code) {
                 const b = ball;
                 if (ball.radius && (brick).hp > 0 && brick !== this.paddle) {
                     const collision_code = brick.collides_with_circle(ball);
                     //collision code 0 no collision
                     //1 corner collision
                     //2 edge collision
+                    ball.direction[0] *= -1;
+                    ball.direction[1] *= -1;
+                    ball.update_state(delta_time);
+                    ball.direction[0] *= -1;
+                    ball.direction[1] *= -1;
                     //if dist between ball center, and rect center 
                     //is greater than Max(brick.width/2, brick.height/2) + ball.radius
                     //take diff between dist above, and Max(brick.width/2, brick.height/2) + ball.radius
@@ -497,6 +503,12 @@ class Game extends SquareAABBCollidable {
                     const dist = distance(ball, brick);
                     const max_dist = Math.max(brick.width / 2, brick.height / 2) + ball.radius;
                     if (dist > max_dist) {
+                        const delta_mag = ball.mid_y() > brick.mid_y() ? -max_dist + dist : max_dist - dist;
+                        const norm_dir = normalize2D(ball.direction);
+                        ball.x += norm_dir[0] * delta_mag;
+                        ball.y += norm_dir[1] * delta_mag;
+                    }
+                    else if (dist < max_dist && collision_code === 1) {
                         const delta_mag = ball.mid_y() > brick.mid_y() ? -max_dist + dist : max_dist - dist;
                         const norm_dir = normalize2D(ball.direction);
                         ball.x += norm_dir[0] * delta_mag;
