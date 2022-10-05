@@ -715,6 +715,7 @@ async function main()
     let frame_count = 0;
     let instantaneous_fps = 0;
     const time_queue:FixedSizeQueue<number> = new FixedSizeQueue<number>(60 * 2);
+    const header = document.getElementById("header");
     const drawLoop = () => 
     {
         frame_count++;
@@ -722,7 +723,7 @@ async function main()
         if(getWidth() !== width)
         {
             width = getWidth();
-            height = getHeight() - 50;
+            height = getHeight()   - header!.clientHeight - 100;
             game.resize(width, height);
             canvas.width = width;
             canvas.height = height;
@@ -756,7 +757,7 @@ async function main()
         requestAnimationFrame(drawLoop);
     }
     drawLoop();
-    game.resize(width, height - 50);
+    game.resize(width, height - header!.clientHeight - 100);
 
 }
 main();
