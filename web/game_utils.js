@@ -29,7 +29,7 @@ export function get_normal_vector_aabb_rect_circle_collision(ball, brick) {
         else {
             if (ball.mid_y() > brick.mid_y()) //top right
              {
-                delta = [-brick.x - brick.width + ball.mid_x(), brick.y - ball.mid_y()];
+                delta = [brick.x + brick.width - ball.mid_x(), brick.y - ball.mid_y()];
                 //delta[0] *= -1;
                 //delta[1] *= -1;
                 point_collision[0] = brick.x + brick.width;
@@ -37,7 +37,7 @@ export function get_normal_vector_aabb_rect_circle_collision(ball, brick) {
             }
             else //bottom right
              {
-                delta = [-brick.x - brick.width + ball.mid_x(), brick.y + brick.height - ball.mid_y()];
+                delta = [brick.x + brick.width - ball.mid_x(), brick.y + brick.height - ball.mid_y()];
                 point_collision[0] = brick.x + brick.width;
                 point_collision[1] = brick.y + brick.height;
             }
@@ -158,6 +158,34 @@ export class SquareAABBCollidable {
 }
 ;
 export class SpatiallyMappableCircle extends SquareAABBCollidable {
+    snap_back_out_of_squareAABBColidable(brick, collision_code, delta_time) {
+        //no collision
+        //1 corner collision
+        //2 edge collision
+        this.direction[0] *= -1;
+        this.direction[1] *= -1;
+        this.update_state(delta_time);
+        this.direction[0] *= -1;
+        this.direction[1] *= -1;
+        //if dist between this center, and rect center 
+        //is greater than Max(brick.width/2, brick.height/2) + this.radius
+        //take diff between dist above, and Max(brick.width/2, brick.height/2) + this.radius
+        //move this by multiplying that diff by the components of dir, and translating this by result
+        const dist = distance(this, brick);
+        const max_dist = Math.max(brick.width / 2, brick.height / 2) + this.radius;
+        if (dist > max_dist) {
+            const delta_mag = this.mid_y() > brick.mid_y() ? -max_dist + dist : max_dist - dist;
+            const norm_dir = normalize2D(this.direction);
+            this.x += norm_dir[0] * delta_mag;
+            this.y += norm_dir[1] * delta_mag;
+        }
+        else if (dist < max_dist && collision_code === 1) {
+            const delta_mag = this.mid_y() > brick.mid_y() ? -max_dist + dist : max_dist - dist;
+            const norm_dir = normalize2D(this.direction);
+            this.x += norm_dir[0] * delta_mag;
+            this.y += norm_dir[1] * delta_mag;
+        }
+    }
 }
 ;
 export class Cell {
