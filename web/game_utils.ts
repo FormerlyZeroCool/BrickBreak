@@ -37,7 +37,7 @@ export function get_normal_vector_aabb_rect_circle_collision(ball:SpatiallyMappa
         {
             if(ball.mid_y() > brick.mid_y())//top right
             {
-                delta = [brick.x + brick.width - ball.mid_x(), brick.y - ball.mid_y()];
+                delta = [brick.x + brick.width - ball.mid_x(), -brick.y + ball.mid_y()];
                 //delta[0] *= -1;
                 //delta[1] *= -1;
                 point_collision[0] = brick.x + brick.width;
@@ -156,14 +156,16 @@ export class SquareAABBCollidable implements Collidable, GameObject {
     width:number;
     height:number;
     direction:number[];
+    accel:number[];
 
-    constructor(x:number, y:number, width:number, height:number, vel_x:number = 0, vel_y:number = 0)
+    constructor(x:number, y:number, width:number, height:number, vel_x:number = 0, vel_y:number = 0, accel_x:number = 0, accel_y = 0)
     {
         this.x = x;
         this.y = y;
         this.width = width;
         this.height = height;
         this.direction = [vel_x, vel_y];
+        this.accel = [accel_x, accel_y];
     }
     collides_with_circle(circle:Circle):number
     {
@@ -186,6 +188,8 @@ export class SquareAABBCollidable implements Collidable, GameObject {
     update_state(delta_time: number): void {
         this.x += this.direction[0] * delta_time * 1/1000;
         this.y += this.direction[1] * delta_time * 1/1000;
+        this.direction[0] += this.accel[0] * delta_time * 1/1000;
+        this.direction[1] += this.accel[1] * delta_time * 1/1000;
     }
     max_width():number { return this.width; }
     max_height():number {return this.height; }

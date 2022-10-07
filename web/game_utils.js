@@ -29,7 +29,7 @@ export function get_normal_vector_aabb_rect_circle_collision(ball, brick) {
         else {
             if (ball.mid_y() > brick.mid_y()) //top right
              {
-                delta = [brick.x + brick.width - ball.mid_x(), brick.y - ball.mid_y()];
+                delta = [brick.x + brick.width - ball.mid_x(), -brick.y + ball.mid_y()];
                 //delta[0] *= -1;
                 //delta[1] *= -1;
                 point_collision[0] = brick.x + brick.width;
@@ -98,12 +98,13 @@ export function manhattan_distance(a, b) {
 ;
 ;
 export class SquareAABBCollidable {
-    constructor(x, y, width, height, vel_x = 0, vel_y = 0) {
+    constructor(x, y, width, height, vel_x = 0, vel_y = 0, accel_x = 0, accel_y = 0) {
         this.x = x;
         this.y = y;
         this.width = width;
         this.height = height;
         this.direction = [vel_x, vel_y];
+        this.accel = [accel_x, accel_y];
     }
     collides_with_circle(circle) {
         const dx = Math.abs(circle.mid_x() - this.mid_x());
@@ -127,6 +128,8 @@ export class SquareAABBCollidable {
     update_state(delta_time) {
         this.x += this.direction[0] * delta_time * 1 / 1000;
         this.y += this.direction[1] * delta_time * 1 / 1000;
+        this.direction[0] += this.accel[0] * delta_time * 1 / 1000;
+        this.direction[1] += this.accel[1] * delta_time * 1 / 1000;
     }
     max_width() { return this.width; }
     max_height() { return this.height; }
