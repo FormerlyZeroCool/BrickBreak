@@ -197,6 +197,7 @@ class Brick extends SquareAABBCollidable {
     }
 
 };
+
 class Paddle extends Brick {
 
     vel_x:number;
@@ -548,7 +549,10 @@ class Game extends SquareAABBCollidable {
             {
                 const ball_index = this.balls.indexOf(ball);
                 if(ball_index !== -1)
-                    this.balls.splice(ball_index, 1);
+                {
+                    this.balls[ball_index] = this.balls[this.balls.length - 1];
+                    this.balls.pop();
+                }
             }
         }
         this.collision_map = new SpatialHashMap2D([this.paddle], this.bricks, this.balls, this.width, this.height, 20, 20);
@@ -563,7 +567,7 @@ class Game extends SquareAABBCollidable {
                     const tdb_index = this.bricks.indexOf(falling);
                     (paddle).set_power_up(brick);
                     if(tdb_index >= 0)
-                        this.bricks.splice(tdb_index, 1);
+                        this.erase_brick(tdb_index);
                 }
             }
             
@@ -633,10 +637,19 @@ class Game extends SquareAABBCollidable {
             const bri = this.bricks[i];
             bri.update_state(delta_time);
             if(bri.y > this.height)
-                this.bricks.splice(i, 1);
+                this.erase_brick(i);
+        }
+    }
+    erase_brick(index:number):void
+    {
+        if(index < this.bricks.length)
+        {
+            this.bricks[index] = this.bricks[this.bricks.length - 1];
+            this.bricks.pop();
         }
     }
 };
+
 function calc_x_accel_paddle():number
 {
     return calc_x_vel_paddle() * 2;
